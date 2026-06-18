@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> Vishnu's Emotion Music Recommender</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #0f0f1a;
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 700px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 8px;
+            color: #a78bfa;
+        }
+
+        .subtitle {
+            color: #9ca3af;
+            margin-bottom: 40px;
+            font-size: 1rem;
+        }
+
+        .input-box {
+            background: #1e1e2e;
+            border: 1.5px solid #3b3b5c;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+
+        textarea {
+            width: 100%;
+            background: #2a2a3e;
+            border: 1px solid #4b4b6e;
+            border-radius: 10px;
+            color: white;
+            font-size: 1rem;
+            padding: 14px;
+            resize: none;
+            outline: none;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        textarea::placeholder {
+            color: #6b7280;
+        }
+
+        button {
+            margin-top: 16px;
+            width: 100%;
+            padding: 14px;
+            background: #7c3aed;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #6d28d9;
+        }
+
+        button:disabled {
+            background: #4b5563;
+            cursor: not-allowed;
+        }
+
+        .emotion-badge {
+            display: none;
+            background: #1e1e2e;
+            border: 1.5px solid #7c3aed;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .emotion-label {
+            font-size: 1rem;
+            color: #9ca3af;
+            margin-bottom: 6px;
+        }
+
+        .emotion-name {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #a78bfa;
+            text-transform: capitalize;
+        }
+
+        .confidence {
+            font-size: 0.85rem;
+            color: #6b7280;
+            margin-top: 4px;
+        }
+
+        .songs-section {
+            display: none;
+        }
+
+        .songs-title {
+            font-size: 1.1rem;
+            color: #9ca3af;
+            margin-bottom: 14px;
+        }
+
+        .song-card {
+            background: #1e1e2e;
+            border: 1px solid #3b3b5c;
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            text-align: left;
+        }
+
+        .song-info .song-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: white;
+        }
+
+        .song-info .artist-name {
+            font-size: 0.85rem;
+            color: #9ca3af;
+            margin-top: 3px;
+        }
+
+        .listen-btn {
+            width: auto;
+            margin-top: 0;
+            padding: 8px 16px;
+            background: #7c3aed;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            text-decoration: none;
+            color: white;
+        }
+
+        .listen-btn:hover {
+            background: #6d28d9;
+        }
+
+        .loading {
+            display: none;
+            color: #9ca3af;
+            margin-top: 10px;
+            font-size: 0.95rem;
+        }
+
+        .error-msg {
+            display: none;
+            color: #f87171;
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1> Vishnu's Emotion Music Recommender</h1>
+        <p class="subtitle">Tell me how you feel — I'll find the perfect study music for you</p>
+
+        <div class="input-box">
+            <textarea id="userText" rows="4"
+                placeholder="e.g. I feel really stressed about my exams..."></textarea>
+            <p class="error-msg" id="errorMsg">Please type something first!</p>
+            <p class="loading" id="loadingMsg">Detecting your emotion...</p>
+            <button id="submitBtn" onclick="getRecommendations()">
+                Find My Music
+            </button>
+        </div>
+
+        <div class="emotion-badge" id="emotionBadge">
+            <p class="emotion-label">Detected emotion</p>
+            <p class="emotion-name" id="emotionName"></p>
+            <p class="confidence" id="confidenceText"></p>
+        </div>
+
+        <div class="songs-section" id="songsSection">
+            <p class="songs-title">Recommended songs for you</p>
+            <div id="songsList"></div>
+        </div>
+    </div>
+
+    <script>
+        async function getRecommendations() {
+            const text = document.getElementById('userText').value.trim();
+            const errorMsg = document.getElementById('errorMsg');
+            const loadingMsg = document.getElementById('loadingMsg');
+            const submitBtn = document.getElementById('submitBtn');
+            const emotionBadge = document.getElementById('emotionBadge');
+            const songsSection = document.getElementById('songsSection');
+
+            errorMsg.style.display = 'none';
+            emotionBadge.style.display = 'none';
+            songsSection.style.display = 'none';
+
+            if (!text) {
+                errorMsg.style.display = 'block';
+                return;
+            }
+
+            submitBtn.disabled = true;
+            loadingMsg.style.display = 'block';
+            submitBtn.textContent = 'Detecting...';
+
+            try {
+                const response = await fetch('/recommend', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text })
+                });
+
+                const data = await response.json();
+
+                document.getElementById('emotionName').textContent = data.emotion;
+                document.getElementById('confidenceText').textContent =
+                    'Confidence: ' + data.confidence + '%';
+                emotionBadge.style.display = 'block';
+
+                const songsList = document.getElementById('songsList');
+                songsList.innerHTML = '';
+
+                data.recommendations.forEach(song => {
+                    songsList.innerHTML += `
+                        <div class="song-card">
+                            <div class="song-info">
+                                <div class="song-name">${song.song}</div>
+                                <div class="artist-name">${song.artist}</div>
+                            </div>
+                            <a href="${song.youtube_link}"
+                               target="_blank"
+                               class="listen-btn">Listen</a>
+                        </div>`;
+                });
+
+                songsSection.style.display = 'block';
+
+            } catch (error) {
+                errorMsg.textContent = 'Something went wrong. Is Flask running?';
+                errorMsg.style.display = 'block';
+            } finally {
+                submitBtn.disabled = false;
+                loadingMsg.style.display = 'none';
+                submitBtn.textContent = 'Find My Music';
+            }
+        }
+    </script>
+</body>
+</html>
