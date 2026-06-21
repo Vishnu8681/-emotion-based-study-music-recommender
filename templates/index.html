@@ -3,52 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title> Vishnu's Emotion Music Recommender</title>
+    <title>Emotion Music Recommender</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: 'Segoe UI', sans-serif;
             background: #0f0f1a;
             color: white;
             min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            padding: 30px 20px;
         }
 
         .container {
-            width: 90%;
-            max-width: 700px;
-            text-align: center;
+            width: 100%;
+            max-width: 980px;
+            margin: 0 auto;
         }
 
         h1 {
-            font-size: 2.2rem;
-            margin-bottom: 8px;
+            font-size: 2rem;
             color: #a78bfa;
+            text-align: center;
+            margin-bottom: 6px;
         }
 
         .subtitle {
+            text-align: center;
             color: #9ca3af;
-            margin-bottom: 40px;
-            font-size: 1rem;
+            margin-bottom: 30px;
+            font-size: 0.95rem;
         }
 
-        .input-box {
+        .panels-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        @media (max-width: 760px) {
+            .panels-row { grid-template-columns: 1fr; }
+        }
+
+        .panel {
             background: #1e1e2e;
-            border: 1.5px solid #3b3b5c;
+            border: 1px solid #3b3b5c;
             border-radius: 16px;
-            padding: 24px;
-            margin-bottom: 20px;
+            padding: 22px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #e5e7eb;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         textarea {
             width: 100%;
+            flex: 1;
+            min-height: 110px;
             background: #2a2a3e;
             border: 1px solid #4b4b6e;
             border-radius: 10px;
@@ -60,214 +80,344 @@
             font-family: 'Segoe UI', sans-serif;
         }
 
-        textarea::placeholder {
-            color: #6b7280;
-        }
+        textarea::placeholder { color: #6b7280; }
 
-        button {
-            margin-top: 16px;
+        .submit-btn {
+            margin-top: 14px;
             width: 100%;
-            padding: 14px;
+            padding: 13px;
             background: #7c3aed;
             color: white;
             border: none;
             border-radius: 10px;
-            font-size: 1rem;
+            font-size: 0.95rem;
             cursor: pointer;
             transition: background 0.2s;
         }
 
-        button:hover {
-            background: #6d28d9;
+        .submit-btn:hover { background: #6d28d9; }
+        .submit-btn:disabled { background: #4b5563; cursor: not-allowed; }
+
+        .webcam-container {
+            position: relative;
+            width: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #0f0f1a;
+            margin-bottom: 12px;
         }
 
-        button:disabled {
-            background: #4b5563;
-            cursor: not-allowed;
+        #webcamVideo {
+            width: 100%;
+            border-radius: 12px;
+            display: block;
         }
+
+        .webcam-placeholder {
+            width: 100%;
+            height: 150px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #6b7280;
+            background: #2a2a3e;
+            border-radius: 12px;
+            border: 2px dashed #3b3b5c;
+            font-size: 0.85rem;
+            gap: 8px;
+        }
+
+        .cam-icon { font-size: 2.2rem; }
+
+        .webcam-btns {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .webcam-btns button {
+            flex: 1;
+            padding: 11px;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        #startCamBtn { background: #059669; color: white; }
+        #startCamBtn:hover { background: #047857; }
+
+        #stopCamBtn {
+            background: #dc2626;
+            color: white;
+            display: none;
+        }
+        #stopCamBtn:hover { background: #b91c1c; }
+
+        canvas { display: none; }
+
+        .results-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 760px) {
+            .results-row { grid-template-columns: 1fr; }
+        }
+
+        .result-block { display: none; }
+        .result-block.show { display: block; }
 
         .emotion-badge {
-            display: none;
             background: #1e1e2e;
             border: 1.5px solid #7c3aed;
             border-radius: 16px;
-            padding: 20px;
-            margin-bottom: 20px;
+            padding: 18px;
+            margin-bottom: 16px;
+            text-align: center;
         }
 
-        .emotion-label {
-            font-size: 1rem;
-            color: #9ca3af;
-            margin-bottom: 6px;
-        }
+        .emotion-label { font-size: 0.85rem; color: #9ca3af; margin-bottom: 6px; }
+        .emotion-name { font-size: 1.8rem; font-weight: 700; color: #a78bfa; text-transform: capitalize; }
+        .confidence { font-size: 0.8rem; color: #6b7280; margin-top: 4px; }
 
-        .emotion-name {
-            font-size: 2rem;
-            font-weight: 700;
-            color: #a78bfa;
-            text-transform: capitalize;
-        }
-
-        .confidence {
-            font-size: 0.85rem;
-            color: #6b7280;
-            margin-top: 4px;
-        }
-
-        .songs-section {
-            display: none;
-        }
-
-        .songs-title {
-            font-size: 1.1rem;
-            color: #9ca3af;
-            margin-bottom: 14px;
-        }
+        .songs-title { font-size: 0.9rem; color: #9ca3af; margin-bottom: 10px; text-align: center; }
 
         .song-card {
             background: #1e1e2e;
             border: 1px solid #3b3b5c;
             border-radius: 12px;
-            padding: 16px 20px;
-            margin-bottom: 12px;
+            padding: 13px 16px;
+            margin-bottom: 10px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            text-align: left;
+            gap: 10px;
         }
 
-        .song-info .song-name {
-            font-size: 1rem;
-            font-weight: 600;
-            color: white;
-        }
-
-        .song-info .artist-name {
-            font-size: 0.85rem;
-            color: #9ca3af;
-            margin-top: 3px;
-        }
+        .song-name { font-size: 0.92rem; font-weight: 600; color: white; }
+        .artist-name { font-size: 0.8rem; color: #9ca3af; margin-top: 2px; }
 
         .listen-btn {
-            width: auto;
-            margin-top: 0;
-            padding: 8px 16px;
+            padding: 7px 14px;
             background: #7c3aed;
             border-radius: 8px;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             text-decoration: none;
             color: white;
+            white-space: nowrap;
         }
+        .listen-btn:hover { background: #6d28d9; }
 
-        .listen-btn:hover {
-            background: #6d28d9;
-        }
-
-        .loading {
-            display: none;
-            color: #9ca3af;
-            margin-top: 10px;
-            font-size: 0.95rem;
-        }
-
-        .error-msg {
-            display: none;
-            color: #f87171;
-            margin-top: 10px;
-            font-size: 0.9rem;
-        }
+        .error-msg { display: none; color: #f87171; margin-top: 10px; font-size: 0.85rem; text-align: center; }
+        .loading-msg { display: none; color: #9ca3af; margin-top: 10px; font-size: 0.85rem; text-align: center; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1> Vishnu's Emotion Music Recommender</h1>
-        <p class="subtitle">Tell me how you feel — I'll find the perfect study music for you</p>
+<div class="container">
+    <h1>Emotion Music Recommender</h1>
+    <p class="subtitle">Use text, webcam, or both — whichever feels right to you</p>
 
-        <div class="input-box">
+    <div class="panels-row">
+        <div class="panel">
+            <div class="panel-title">✍️ Type how you feel</div>
             <textarea id="userText" rows="4"
                 placeholder="e.g. I feel really stressed about my exams..."></textarea>
-            <p class="error-msg" id="errorMsg">Please type something first!</p>
-            <p class="loading" id="loadingMsg">Detecting your emotion...</p>
-            <button id="submitBtn" onclick="getRecommendations()">
+            <p class="error-msg" id="textError">Please type something first!</p>
+            <p class="loading-msg" id="textLoading">Detecting your emotion...</p>
+            <button class="submit-btn" id="textBtn" onclick="getTextRecommendation()">
                 Find My Music
             </button>
         </div>
 
-        <div class="emotion-badge" id="emotionBadge">
-            <p class="emotion-label">Detected emotion</p>
-            <p class="emotion-name" id="emotionName"></p>
-            <p class="confidence" id="confidenceText"></p>
-        </div>
-
-        <div class="songs-section" id="songsSection">
-            <p class="songs-title">Recommended songs for you</p>
-            <div id="songsList"></div>
+        <div class="panel">
+            <div class="panel-title">📷 Use your webcam</div>
+            <div class="webcam-container">
+                <div class="webcam-placeholder" id="camPlaceholder">
+                    <span class="cam-icon">📷</span>
+                    <span>Click "Start Camera" to begin</span>
+                </div>
+                <video id="webcamVideo" autoplay playsinline style="display:none;"></video>
+                <canvas id="captureCanvas"></canvas>
+            </div>
+            <div class="webcam-btns">
+                <button id="startCamBtn" onclick="startCamera()">▶ Start Camera</button>
+                <button id="stopCamBtn" onclick="stopCamera()">⏹ Stop Camera</button>
+            </div>
+            <p class="error-msg" id="camError"></p>
+            <p class="loading-msg" id="camLoading">Analyzing your face...</p>
+            <button class="submit-btn" id="camBtn" onclick="captureAndAnalyze()" disabled>
+                📸 Capture & Detect Emotion
+            </button>
         </div>
     </div>
 
-    <script>
-        async function getRecommendations() {
-            const text = document.getElementById('userText').value.trim();
-            const errorMsg = document.getElementById('errorMsg');
-            const loadingMsg = document.getElementById('loadingMsg');
-            const submitBtn = document.getElementById('submitBtn');
-            const emotionBadge = document.getElementById('emotionBadge');
-            const songsSection = document.getElementById('songsSection');
+    <div class="results-row">
+        <div class="result-block" id="textResultBlock">
+            <div class="emotion-badge">
+                <p class="emotion-label">Detected from text</p>
+                <p class="emotion-name" id="textEmotionName"></p>
+                <p class="confidence" id="textConfidenceText"></p>
+            </div>
+            <p class="songs-title">Recommended for you</p>
+            <div id="textSongsList"></div>
+        </div>
 
-            errorMsg.style.display = 'none';
-            emotionBadge.style.display = 'none';
-            songsSection.style.display = 'none';
+        <div class="result-block" id="camResultBlock">
+            <div class="emotion-badge">
+                <p class="emotion-label">Detected from webcam</p>
+                <p class="emotion-name" id="camEmotionName"></p>
+                <p class="confidence" id="camConfidenceText"></p>
+            </div>
+            <p class="songs-title">Recommended for you</p>
+            <div id="camSongsList"></div>
+        </div>
+    </div>
+</div>
 
-            if (!text) {
-                errorMsg.style.display = 'block';
-                return;
-            }
+<script>
+    let stream = null;
 
-            submitBtn.disabled = true;
-            loadingMsg.style.display = 'block';
-            submitBtn.textContent = 'Detecting...';
-
-            try {
-                const response = await fetch('/recommend', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text: text })
-                });
-
-                const data = await response.json();
-
-                document.getElementById('emotionName').textContent = data.emotion;
-                document.getElementById('confidenceText').textContent =
-                    'Confidence: ' + data.confidence + '%';
-                emotionBadge.style.display = 'block';
-
-                const songsList = document.getElementById('songsList');
-                songsList.innerHTML = '';
-
-                data.recommendations.forEach(song => {
-                    songsList.innerHTML += `
-                        <div class="song-card">
-                            <div class="song-info">
-                                <div class="song-name">${song.song}</div>
-                                <div class="artist-name">${song.artist}</div>
-                            </div>
-                            <a href="${song.youtube_link}"
-                               target="_blank"
-                               class="listen-btn">Listen</a>
-                        </div>`;
-                });
-
-                songsSection.style.display = 'block';
-
-            } catch (error) {
-                errorMsg.textContent = 'Something went wrong. Is Flask running?';
-                errorMsg.style.display = 'block';
-            } finally {
-                submitBtn.disabled = false;
-                loadingMsg.style.display = 'none';
-                submitBtn.textContent = 'Find My Music';
-            }
+    async function startCamera() {
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            const video = document.getElementById('webcamVideo');
+            video.srcObject = stream;
+            video.style.display = 'block';
+            document.getElementById('camPlaceholder').style.display = 'none';
+            document.getElementById('startCamBtn').style.display = 'none';
+            document.getElementById('stopCamBtn').style.display = 'block';
+            document.getElementById('camBtn').disabled = false;
+        } catch (err) {
+            document.getElementById('camError').textContent = 'Camera access denied. Please allow camera permission.';
+            document.getElementById('camError').style.display = 'block';
         }
-    </script>
+    }
+
+    function stopCamera() {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            stream = null;
+        }
+        const video = document.getElementById('webcamVideo');
+        video.style.display = 'none';
+        document.getElementById('camPlaceholder').style.display = 'flex';
+        document.getElementById('startCamBtn').style.display = 'block';
+        document.getElementById('stopCamBtn').style.display = 'none';
+        document.getElementById('camBtn').disabled = true;
+    }
+
+    async function captureAndAnalyze() {
+        const video = document.getElementById('webcamVideo');
+        const canvas = document.getElementById('captureCanvas');
+        const loading = document.getElementById('camLoading');
+        const camBtn = document.getElementById('camBtn');
+        const camError = document.getElementById('camError');
+
+        camError.style.display = 'none';
+        loading.style.display = 'block';
+        camBtn.disabled = true;
+        camBtn.textContent = 'Analyzing...';
+
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        const imageData = canvas.toDataURL('image/jpeg');
+
+        try {
+            const response = await fetch('/recommend/webcam', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: imageData })
+            });
+
+            const data = await response.json();
+
+            if (data.error) {
+                camError.textContent = 'Could not detect face. Please look at the camera clearly.';
+                camError.style.display = 'block';
+            } else {
+                showCamResults(data);
+            }
+        } catch (err) {
+            camError.textContent = 'Something went wrong. Is Flask running?';
+            camError.style.display = 'block';
+        } finally {
+            loading.style.display = 'none';
+            camBtn.disabled = false;
+            camBtn.textContent = '📸 Capture & Detect Emotion';
+        }
+    }
+
+    async function getTextRecommendation() {
+        const text = document.getElementById('userText').value.trim();
+        const textError = document.getElementById('textError');
+        const loading = document.getElementById('textLoading');
+        const btn = document.getElementById('textBtn');
+
+        textError.style.display = 'none';
+
+        if (!text) {
+            textError.style.display = 'block';
+            return;
+        }
+
+        loading.style.display = 'block';
+        btn.disabled = true;
+        btn.textContent = 'Detecting...';
+
+        try {
+            const response = await fetch('/recommend/text', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text })
+            });
+
+            const data = await response.json();
+            showTextResults(data);
+
+        } catch (err) {
+            textError.textContent = 'Something went wrong. Is Flask running?';
+            textError.style.display = 'block';
+        } finally {
+            loading.style.display = 'none';
+            btn.disabled = false;
+            btn.textContent = 'Find My Music';
+        }
+    }
+
+    function renderSongs(containerId, songs) {
+        const list = document.getElementById(containerId);
+        list.innerHTML = '';
+        songs.forEach(song => {
+            list.innerHTML += `
+                <div class="song-card">
+                    <div>
+                        <div class="song-name">${song.song}</div>
+                        <div class="artist-name">${song.artist}</div>
+                    </div>
+                    <a href="${song.youtube_link}" target="_blank" class="listen-btn">▶ Listen</a>
+                </div>`;
+        });
+    }
+
+    function showTextResults(data) {
+        document.getElementById('textEmotionName').textContent = data.emotion;
+        document.getElementById('textConfidenceText').textContent = 'Confidence: ' + data.confidence + '%';
+        renderSongs('textSongsList', data.recommendations);
+        document.getElementById('textResultBlock').classList.add('show');
+        document.getElementById('textResultBlock').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function showCamResults(data) {
+        document.getElementById('camEmotionName').textContent = data.emotion;
+        document.getElementById('camConfidenceText').textContent = 'Confidence: ' + data.confidence + '%';
+        renderSongs('camSongsList', data.recommendations);
+        document.getElementById('camResultBlock').classList.add('show');
+    }
+</script>
 </body>
 </html>
