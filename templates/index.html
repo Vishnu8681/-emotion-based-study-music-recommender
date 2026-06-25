@@ -13,6 +13,7 @@
             color: white;
             min-height: 100vh;
             padding: 30px 20px;
+            transition: background 1.2s ease;
         }
 
         .container {
@@ -62,7 +63,39 @@
             margin-bottom: 14px;
             display: flex;
             align-items: center;
+            justify-content: space-between;
             gap: 8px;
+        }
+
+        .live-pill {
+            font-size: 11px;
+            padding: 3px 10px;
+            border-radius: 20px;
+            background: #2a2a3e;
+            color: #6b7280;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .live-pill.active { color: #34d399; }
+
+        .pulse-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #4b5563;
+        }
+
+        .live-pill.active .pulse-dot {
+            background: #34d399;
+            animation: pulse 1.4s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.5); }
+            70% { box-shadow: 0 0 0 6px rgba(52, 211, 153, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
         }
 
         textarea {
@@ -130,10 +163,23 @@
 
         .cam-icon { font-size: 2.2rem; }
 
+        .scan-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            border: 2px solid transparent;
+            border-radius: 12px;
+            pointer-events: none;
+            transition: border-color 0.3s;
+        }
+
+        .scan-overlay.scanning {
+            border-color: #7c3aed;
+        }
+
         .webcam-btns {
             display: flex;
             gap: 8px;
-            margin-bottom: 12px;
+            margin-bottom: 4px;
         }
 
         .webcam-btns button {
@@ -158,6 +204,13 @@
 
         canvas { display: none; }
 
+        .scan-hint {
+            font-size: 0.78rem;
+            color: #6b7280;
+            text-align: center;
+            margin-top: 10px;
+        }
+
         .results-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -176,13 +229,33 @@
             border: 1.5px solid #7c3aed;
             border-radius: 16px;
             padding: 18px;
-            margin-bottom: 16px;
+            margin-bottom: 14px;
             text-align: center;
         }
 
         .emotion-label { font-size: 0.85rem; color: #9ca3af; margin-bottom: 6px; }
         .emotion-name { font-size: 1.8rem; font-weight: 700; color: #a78bfa; text-transform: capitalize; }
         .confidence { font-size: 0.8rem; color: #6b7280; margin-top: 4px; }
+
+        .quote-card {
+            background: linear-gradient(135deg, #2a2a3e, #1e1e2e);
+            border-left: 3px solid #7c3aed;
+            border-radius: 10px;
+            padding: 14px 16px;
+            margin-bottom: 16px;
+            font-style: italic;
+            font-size: 0.9rem;
+            color: #d1d5db;
+            line-height: 1.5;
+        }
+
+        .quote-card::before {
+            content: "\201C";
+            color: #7c3aed;
+            font-size: 1.4rem;
+            font-style: normal;
+            margin-right: 4px;
+        }
 
         .songs-title { font-size: 0.9rem; color: #9ca3af; margin-bottom: 10px; text-align: center; }
 
@@ -223,7 +296,9 @@
 
     <div class="panels-row">
         <div class="panel">
-            <div class="panel-title">✍️ Type how you feel</div>
+            <div class="panel-title">
+                <span>✍️ Type how you feel</span>
+            </div>
             <textarea id="userText" rows="4"
                 placeholder="e.g. I feel really stressed about my exams..."></textarea>
             <p class="error-msg" id="textError">Please type something first!</p>
@@ -234,24 +309,25 @@
         </div>
 
         <div class="panel">
-            <div class="panel-title">📷 Use your webcam</div>
+            <div class="panel-title">
+                <span>📷 Live webcam detection</span>
+                <span class="live-pill" id="livePill"><span class="pulse-dot"></span><span id="livePillText">Idle</span></span>
+            </div>
             <div class="webcam-container">
                 <div class="webcam-placeholder" id="camPlaceholder">
                     <span class="cam-icon">📷</span>
-                    <span>Click "Start Camera" to begin</span>
+                    <span>Click "Start Camera" to begin auto-detection</span>
                 </div>
                 <video id="webcamVideo" autoplay playsinline style="display:none;"></video>
+                <div class="scan-overlay" id="scanOverlay"></div>
                 <canvas id="captureCanvas"></canvas>
             </div>
             <div class="webcam-btns">
                 <button id="startCamBtn" onclick="startCamera()">▶ Start Camera</button>
                 <button id="stopCamBtn" onclick="stopCamera()">⏹ Stop Camera</button>
             </div>
+            <p class="scan-hint" id="scanHint" style="display:none;">Auto-scanning your expression every 4 seconds...</p>
             <p class="error-msg" id="camError"></p>
-            <p class="loading-msg" id="camLoading">Analyzing your face...</p>
-            <button class="submit-btn" id="camBtn" onclick="captureAndAnalyze()" disabled>
-                📸 Capture & Detect Emotion
-            </button>
         </div>
     </div>
 
@@ -262,6 +338,7 @@
                 <p class="emotion-name" id="textEmotionName"></p>
                 <p class="confidence" id="textConfidenceText"></p>
             </div>
+            <div class="quote-card" id="textQuote"></div>
             <p class="songs-title">Recommended for you</p>
             <div id="textSongsList"></div>
         </div>
@@ -272,6 +349,7 @@
                 <p class="emotion-name" id="camEmotionName"></p>
                 <p class="confidence" id="camConfidenceText"></p>
             </div>
+            <div class="quote-card" id="camQuote"></div>
             <p class="songs-title">Recommended for you</p>
             <div id="camSongsList"></div>
         </div>
@@ -280,6 +358,8 @@
 
 <script>
     let stream = null;
+    let scanInterval = null;
+    let isScanning = false;
 
     async function startCamera() {
         try {
@@ -290,7 +370,12 @@
             document.getElementById('camPlaceholder').style.display = 'none';
             document.getElementById('startCamBtn').style.display = 'none';
             document.getElementById('stopCamBtn').style.display = 'block';
-            document.getElementById('camBtn').disabled = false;
+            document.getElementById('scanHint').style.display = 'block';
+            document.getElementById('livePill').classList.add('active');
+            document.getElementById('livePillText').textContent = 'Live';
+
+            captureAndAnalyze();
+            scanInterval = setInterval(captureAndAnalyze, 4000);
         } catch (err) {
             document.getElementById('camError').textContent = 'Camera access denied. Please allow camera permission.';
             document.getElementById('camError').style.display = 'block';
@@ -302,25 +387,31 @@
             stream.getTracks().forEach(track => track.stop());
             stream = null;
         }
+        if (scanInterval) {
+            clearInterval(scanInterval);
+            scanInterval = null;
+        }
         const video = document.getElementById('webcamVideo');
         video.style.display = 'none';
         document.getElementById('camPlaceholder').style.display = 'flex';
         document.getElementById('startCamBtn').style.display = 'block';
         document.getElementById('stopCamBtn').style.display = 'none';
-        document.getElementById('camBtn').disabled = true;
+        document.getElementById('scanHint').style.display = 'none';
+        document.getElementById('livePill').classList.remove('active');
+        document.getElementById('livePillText').textContent = 'Idle';
+        document.getElementById('scanOverlay').classList.remove('scanning');
     }
 
     async function captureAndAnalyze() {
+        if (isScanning) return;
+        isScanning = true;
+
         const video = document.getElementById('webcamVideo');
         const canvas = document.getElementById('captureCanvas');
-        const loading = document.getElementById('camLoading');
-        const camBtn = document.getElementById('camBtn');
         const camError = document.getElementById('camError');
 
-        camError.style.display = 'none';
-        loading.style.display = 'block';
-        camBtn.disabled = true;
-        camBtn.textContent = 'Analyzing...';
+        document.getElementById('scanOverlay').classList.add('scanning');
+        document.getElementById('livePillText').textContent = 'Scanning...';
 
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
@@ -336,19 +427,17 @@
 
             const data = await response.json();
 
-            if (data.error) {
-                camError.textContent = 'Could not detect face. Please look at the camera clearly.';
-                camError.style.display = 'block';
-            } else {
+            if (!data.error) {
+                camError.style.display = 'none';
                 showCamResults(data);
             }
         } catch (err) {
             camError.textContent = 'Something went wrong. Is Flask running?';
             camError.style.display = 'block';
         } finally {
-            loading.style.display = 'none';
-            camBtn.disabled = false;
-            camBtn.textContent = '📸 Capture & Detect Emotion';
+            isScanning = false;
+            document.getElementById('scanOverlay').classList.remove('scanning');
+            if (stream) document.getElementById('livePillText').textContent = 'Live';
         }
     }
 
@@ -389,6 +478,23 @@
         }
     }
 
+    function setMoodBackground(emotion) {
+        const moodColors = {
+            joy: 'radial-gradient(circle at 30% 20%, #4a3b0f 0%, #0f0f1a 60%)',
+            happy: 'radial-gradient(circle at 30% 20%, #4a3b0f 0%, #0f0f1a 60%)',
+            sadness: 'radial-gradient(circle at 30% 20%, #16243f 0%, #0f0f1a 60%)',
+            sad: 'radial-gradient(circle at 30% 20%, #16243f 0%, #0f0f1a 60%)',
+            anger: 'radial-gradient(circle at 30% 20%, #3f1616 0%, #0f0f1a 60%)',
+            angry: 'radial-gradient(circle at 30% 20%, #3f1616 0%, #0f0f1a 60%)',
+            fear: 'radial-gradient(circle at 30% 20%, #2c1a3f 0%, #0f0f1a 60%)',
+            love: 'radial-gradient(circle at 30% 20%, #3f1a35 0%, #0f0f1a 60%)',
+            surprise: 'radial-gradient(circle at 30% 20%, #1a3f3a 0%, #0f0f1a 60%)',
+            disgust: 'radial-gradient(circle at 30% 20%, #2a3f1a 0%, #0f0f1a 60%)',
+            neutral: 'radial-gradient(circle at 30% 20%, #1e1e2e 0%, #0f0f1a 60%)'
+        };
+        document.body.style.background = moodColors[emotion] || moodColors.neutral;
+    }
+
     function renderSongs(containerId, songs) {
         const list = document.getElementById(containerId);
         list.innerHTML = '';
@@ -407,16 +513,20 @@
     function showTextResults(data) {
         document.getElementById('textEmotionName').textContent = data.emotion;
         document.getElementById('textConfidenceText').textContent = 'Confidence: ' + data.confidence + '%';
+        document.getElementById('textQuote').textContent = data.quote || '';
         renderSongs('textSongsList', data.recommendations);
         document.getElementById('textResultBlock').classList.add('show');
         document.getElementById('textResultBlock').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        setMoodBackground(data.emotion);
     }
 
     function showCamResults(data) {
         document.getElementById('camEmotionName').textContent = data.emotion;
         document.getElementById('camConfidenceText').textContent = 'Confidence: ' + data.confidence + '%';
+        document.getElementById('camQuote').textContent = data.quote || '';
         renderSongs('camSongsList', data.recommendations);
         document.getElementById('camResultBlock').classList.add('show');
+        setMoodBackground(data.emotion);
     }
 </script>
 </body>

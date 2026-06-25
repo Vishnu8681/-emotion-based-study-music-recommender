@@ -1,3 +1,4 @@
+import random
 from flask import Flask, request, jsonify, render_template
 import numpy as np
 import pandas as pd
@@ -31,6 +32,48 @@ EMOTION_MAP = {
     'disgust': 'disgust',
     'neutral': 'neutral'
 }
+QUOTES = {
+    'joy': [
+        "Happiness is not by chance, but by choice.",
+        "The best way to spread positivity is to enjoy your own.",
+        "Keep this energy — it's contagious."
+    ],
+    'sadness': [
+        "Even the darkest night will end and the sun will rise.",
+        "Tough times don't last, tough people do.",
+        "It's okay to rest. You're allowed to feel this."
+    ],
+    'anger': [
+        "Calm mind brings inner strength and self-confidence.",
+        "Breathe. This feeling will pass.",
+        "Channel this energy into focus, not frustration."
+    ],
+    'fear': [
+        "Courage is not the absence of fear, but moving through it.",
+        "You have survived 100% of your hardest days so far.",
+        "One step at a time is still progress."
+    ],
+    'love': [
+        "Where there is love, there is life.",
+        "Carry this warmth into everything you do today.",
+        "Gratitude turns what we have into enough."
+    ],
+    'surprise': [
+        "Stay curious — the best ideas come from surprise.",
+        "Embrace the unexpected, it often leads somewhere good.",
+        "Every surprise is a new door opening."
+    ],
+    'neutral': [
+        "Calm is a superpower.",
+        "Steady minds make the clearest decisions.",
+        "Focus is a quiet kind of strength."
+    ],
+    'disgust': [
+        "Let go of what doesn't serve you.",
+        "Clarity often comes right after discomfort.",
+        "This feeling is temporary — your focus isn't."
+    ]
+}
 
 def predict_text_emotion(text):
     seq = pad_sequences(
@@ -62,11 +105,13 @@ def recommend_text():
         return jsonify({'error': 'No text provided'}), 400
     emotion, confidence = predict_text_emotion(text)
     songs = get_songs(emotion)
+    quote = random.choice(QUOTES.get(emotion, QUOTES['neutral']))
     return jsonify({
         'emotion': emotion,
         'confidence': confidence,
         'recommendations': songs,
-        'method': 'text'
+        'method': 'text',
+        'quote': quote
     })
 
 @app.route('/recommend/webcam', methods=['POST'])
@@ -87,17 +132,25 @@ def recommend_webcam():
             detector_backend='opencv'
 )
 
-        raw_emotion = result[0]['dominant_emotion']
+        emotions_dict = result[0]['emotion']
+
+# Reduce neutral's score slightly so it doesn't dominate over close emotions
+        if 'neutral' in emotions_dict:
+            emotions_dict['neutral'] = emotions_dict['neutral'] * 0.6
+
+        raw_emotion = max(emotions_dict, key=emotions_dict.get)
         emotion = EMOTION_MAP.get(raw_emotion, 'neutral')
-        confidence = round(float(result[0]['emotion'][raw_emotion]), 1)
+        confidence = round(float(emotions_dict[raw_emotion]), 1)
 
         songs = get_songs(emotion)
+        quote = random.choice(QUOTES.get(emotion, QUOTES['neutral']))
         return jsonify({
             'emotion': emotion,
             'confidence': confidence,
             'recommendations': songs,
             'method': 'webcam',
-            'raw_emotion': raw_emotion
+            'raw_emotion': raw_emotion,
+            'quote': quote
         })
 
     except Exception as e:
