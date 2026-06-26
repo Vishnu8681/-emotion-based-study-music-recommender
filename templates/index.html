@@ -9,14 +9,46 @@
 
         body {
             font-family: 'Segoe UI', sans-serif;
-            background: #0f0f1a;
+            background: linear-gradient(-45deg, #0f0f1a, #1a1530, #0f0f1a, #1a2230);
+            background-size: 400% 400%;
+            animation: gradientShift 18s ease infinite;
             color: white;
             min-height: 100vh;
             padding: 30px 20px;
-            transition: background 1.2s ease;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .mood-emoji-bg {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 22rem;
+            opacity: 0.06;
+            z-index: 0;
+            pointer-events: none;
+            animation: moodPulse 4s ease-in-out infinite;
+            transition: opacity 0.8s ease;
+        }
+
+        @keyframes moodPulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.08); }
         }
 
         .container {
+            position: relative;
+            z-index: 1;
+        }
+
+        .container-inner {
             width: 100%;
             max-width: 980px;
             margin: 0 auto;
@@ -257,6 +289,63 @@
             margin-right: 4px;
         }
 
+        .breakdown-card {
+            background: #1e1e2e;
+            border: 1px solid #3b3b5c;
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-bottom: 16px;
+        }
+
+        .breakdown-title {
+            font-size: 0.78rem;
+            color: #9ca3af;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .bar-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 7px;
+            font-size: 0.78rem;
+        }
+
+        .bar-label {
+            width: 64px;
+            color: #9ca3af;
+            text-transform: capitalize;
+            flex-shrink: 0;
+        }
+
+        .bar-track {
+            flex: 1;
+            height: 7px;
+            background: #2a2a3e;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            background: #7c3aed;
+            border-radius: 4px;
+            transition: width 0.6s ease;
+        }
+
+        .bar-fill.top {
+            background: #a78bfa;
+        }
+
+        .bar-value {
+            width: 36px;
+            text-align: right;
+            color: #6b7280;
+            flex-shrink: 0;
+        }
+
         .songs-title { font-size: 0.9rem; color: #9ca3af; margin-bottom: 10px; text-align: center; }
 
         .song-card {
@@ -287,10 +376,60 @@
 
         .error-msg { display: none; color: #f87171; margin-top: 10px; font-size: 0.85rem; text-align: center; }
         .loading-msg { display: none; color: #9ca3af; margin-top: 10px; font-size: 0.85rem; text-align: center; }
+
+        .chart-title {
+            font-size: 0.85rem;
+            color: #9ca3af;
+            margin-bottom: 10px;
+        }
+
+        .chart-bars {
+            margin-bottom: 18px;
+        }
+
+        .chart-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .chart-label {
+            font-size: 0.75rem;
+            color: #d1d5db;
+            text-transform: capitalize;
+            width: 70px;
+            flex-shrink: 0;
+        }
+
+        .chart-track {
+            flex: 1;
+            height: 8px;
+            background: #2a2a3e;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .chart-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #7c3aed, #a78bfa);
+            border-radius: 6px;
+            transition: width 0.6s ease;
+        }
+
+        .chart-value {
+            font-size: 0.72rem;
+            color: #6b7280;
+            width: 40px;
+            text-align: right;
+            flex-shrink: 0;
+        }
     </style>
 </head>
 <body>
+<div class="mood-emoji-bg" id="moodEmojiBg">😐</div>
 <div class="container">
+    <div class="container-inner">
     <h1>Emotion Music Recommender</h1>
     <p class="subtitle">Use text, webcam, or both — whichever feels right to you</p>
 
@@ -339,6 +478,7 @@
                 <p class="confidence" id="textConfidenceText"></p>
             </div>
             <div class="quote-card" id="textQuote"></div>
+            <div id="textBreakdown"></div>
             <p class="songs-title">Recommended for you</p>
             <div id="textSongsList"></div>
         </div>
@@ -350,9 +490,11 @@
                 <p class="confidence" id="camConfidenceText"></p>
             </div>
             <div class="quote-card" id="camQuote"></div>
+            <div id="camBreakdown"></div>
             <p class="songs-title">Recommended for you</p>
             <div id="camSongsList"></div>
         </div>
+    </div>
     </div>
 </div>
 
@@ -478,21 +620,71 @@
         }
     }
 
+    const moodEmojis = {
+        joy: '😄', happy: '😄',
+        sadness: '😢', sad: '😢',
+        anger: '😠', angry: '😠',
+        fear: '😨',
+        love: '🥰',
+        surprise: '😲',
+        disgust: '😖',
+        neutral: '😐'
+    };
+
+    const moodTints = {
+        joy: 'rgba(250, 204, 21, 0.10)', happy: 'rgba(250, 204, 21, 0.10)',
+        sadness: 'rgba(59, 130, 246, 0.10)', sad: 'rgba(59, 130, 246, 0.10)',
+        anger: 'rgba(239, 68, 68, 0.10)', angry: 'rgba(239, 68, 68, 0.10)',
+        fear: 'rgba(139, 92, 246, 0.10)',
+        love: 'rgba(236, 72, 153, 0.10)',
+        surprise: 'rgba(45, 212, 191, 0.10)',
+        disgust: 'rgba(132, 204, 22, 0.10)',
+        neutral: 'rgba(148, 163, 184, 0.06)'
+    };
+
     function setMoodBackground(emotion) {
-        const moodColors = {
-            joy: 'radial-gradient(circle at 30% 20%, #4a3b0f 0%, #0f0f1a 60%)',
-            happy: 'radial-gradient(circle at 30% 20%, #4a3b0f 0%, #0f0f1a 60%)',
-            sadness: 'radial-gradient(circle at 30% 20%, #16243f 0%, #0f0f1a 60%)',
-            sad: 'radial-gradient(circle at 30% 20%, #16243f 0%, #0f0f1a 60%)',
-            anger: 'radial-gradient(circle at 30% 20%, #3f1616 0%, #0f0f1a 60%)',
-            angry: 'radial-gradient(circle at 30% 20%, #3f1616 0%, #0f0f1a 60%)',
-            fear: 'radial-gradient(circle at 30% 20%, #2c1a3f 0%, #0f0f1a 60%)',
-            love: 'radial-gradient(circle at 30% 20%, #3f1a35 0%, #0f0f1a 60%)',
-            surprise: 'radial-gradient(circle at 30% 20%, #1a3f3a 0%, #0f0f1a 60%)',
-            disgust: 'radial-gradient(circle at 30% 20%, #2a3f1a 0%, #0f0f1a 60%)',
-            neutral: 'radial-gradient(circle at 30% 20%, #1e1e2e 0%, #0f0f1a 60%)'
-        };
-        document.body.style.background = moodColors[emotion] || moodColors.neutral;
+        const emojiEl = document.getElementById('moodEmojiBg');
+        emojiEl.textContent = moodEmojis[emotion] || '😐';
+        emojiEl.style.opacity = '0.07';
+
+        let tintEl = document.getElementById('moodTintLayer');
+        if (!tintEl) {
+            tintEl = document.createElement('div');
+            tintEl.id = 'moodTintLayer';
+            tintEl.style.position = 'fixed';
+            tintEl.style.top = 0;
+            tintEl.style.left = 0;
+            tintEl.style.right = 0;
+            tintEl.style.bottom = 0;
+            tintEl.style.zIndex = 0;
+            tintEl.style.pointerEvents = 'none';
+            tintEl.style.transition = 'background 1.4s ease';
+            document.body.appendChild(tintEl);
+        }
+        tintEl.style.background = moodTints[emotion] || moodTints.neutral;
+    }
+
+    function renderBreakdownChart(containerId, breakdown) {
+        const el = document.getElementById(containerId);
+        if (!breakdown) { el.innerHTML = ''; return; }
+
+        const entries = Object.entries(breakdown).sort((a, b) => b[1] - a[1]);
+        const maxVal = Math.max(...entries.map(e => e[1]), 1);
+
+        let html = '<p class="chart-title">Emotion breakdown</p><div class="chart-bars">';
+        entries.forEach(([label, value]) => {
+            const pct = Math.max((value / maxVal) * 100, 2);
+            html += `
+                <div class="chart-row">
+                    <span class="chart-label">${label}</span>
+                    <div class="chart-track">
+                        <div class="chart-fill" style="width:${pct}%"></div>
+                    </div>
+                    <span class="chart-value">${value}%</span>
+                </div>`;
+        });
+        html += '</div>';
+        el.innerHTML = html;
     }
 
     function renderSongs(containerId, songs) {
@@ -514,6 +706,7 @@
         document.getElementById('textEmotionName').textContent = data.emotion;
         document.getElementById('textConfidenceText').textContent = 'Confidence: ' + data.confidence + '%';
         document.getElementById('textQuote').textContent = data.quote || '';
+        renderBreakdownChart('textBreakdown', data.breakdown);
         renderSongs('textSongsList', data.recommendations);
         document.getElementById('textResultBlock').classList.add('show');
         document.getElementById('textResultBlock').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -524,6 +717,7 @@
         document.getElementById('camEmotionName').textContent = data.emotion;
         document.getElementById('camConfidenceText').textContent = 'Confidence: ' + data.confidence + '%';
         document.getElementById('camQuote').textContent = data.quote || '';
+        renderBreakdownChart('camBreakdown', data.breakdown);
         renderSongs('camSongsList', data.recommendations);
         document.getElementById('camResultBlock').classList.add('show');
         setMoodBackground(data.emotion);

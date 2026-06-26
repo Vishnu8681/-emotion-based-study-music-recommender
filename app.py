@@ -80,10 +80,11 @@ def predict_text_emotion(text):
         tokenizer.texts_to_sequences([text]),
         maxlen=MAX_LEN
     )
-    pred = model.predict(seq, verbose=0)
+    pred = model.predict(seq, verbose=0)[0]
     emotion = le.classes_[np.argmax(pred)]
     confidence = round(float(np.max(pred)) * 100, 1)
-    return emotion, confidence
+    breakdown = {le.classes_[i]: round(float(pred[i]) * 100, 1) for i in range(len(le.classes_))}
+    return emotion, confidence, breakdown
 
 def get_songs(emotion):
     songs = music_df[music_df['emotion'] == emotion]
@@ -103,7 +104,7 @@ def recommend_text():
     text = data.get('text', '')
     if not text:
         return jsonify({'error': 'No text provided'}), 400
-    emotion, confidence = predict_text_emotion(text)
+    emotion, confidence, breakdown = predict_text_emotion(text)
     songs = get_songs(emotion)
     quote = random.choice(QUOTES.get(emotion, QUOTES['neutral']))
     return jsonify({
@@ -111,7 +112,8 @@ def recommend_text():
         'confidence': confidence,
         'recommendations': songs,
         'method': 'text',
-        'quote': quote
+        'quote': quote,
+        'breakdown': breakdown
     })
 
 @app.route('/recommend/webcam', methods=['POST'])
@@ -133,14 +135,12 @@ def recommend_webcam():
 )
 
         emotions_dict = result[0]['emotion']
-
-# Reduce neutral's score slightly so it doesn't dominate over close emotions
         if 'neutral' in emotions_dict:
             emotions_dict['neutral'] = emotions_dict['neutral'] * 0.6
-
         raw_emotion = max(emotions_dict, key=emotions_dict.get)
         emotion = EMOTION_MAP.get(raw_emotion, 'neutral')
         confidence = round(float(emotions_dict[raw_emotion]), 1)
+        breakdown = {EMOTION_MAP.get(k, k): round(float(v), 1) for k, v in emotions_dict.items()}
 
         songs = get_songs(emotion)
         quote = random.choice(QUOTES.get(emotion, QUOTES['neutral']))
@@ -150,7 +150,8 @@ def recommend_webcam():
             'recommendations': songs,
             'method': 'webcam',
             'raw_emotion': raw_emotion,
-            'quote': quote
+            'quote': quote,
+            'breakdown': breakdown
         })
 
     except Exception as e:
