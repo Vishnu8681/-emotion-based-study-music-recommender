@@ -3,725 +3,3833 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Emotion Music Recommender</title>
+    <title>HarmonyMind - Emotion-Based Study Music Recommender</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chart.js for Analytics Dashboard -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        /* Modern Design System & CSS Variables */
+        :root {
+            --theme-hue: 260;
+            --primary: hsl(var(--theme-hue), 85%, 65%);
+            --primary-light: hsl(var(--theme-hue), 90%, 75%);
+            --primary-glow: hsla(var(--theme-hue), 85%, 65%, 0.35);
+            --bg-color: #07070c;
+            --card-bg: rgba(20, 20, 35, 0.6);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --border-hover: rgba(255, 255, 255, 0.16);
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --transition-speed: 0.6s;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary) transparent;
+        }
+
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 4px;
+        }
 
         body {
-            font-family: 'Segoe UI', sans-serif;
-            background: linear-gradient(-45deg, #0f0f1a, #1a1530, #0f0f1a, #1a2230);
-            background-size: 400% 400%;
-            animation: gradientShift 18s ease infinite;
-            color: white;
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(at 0% 0%, hsla(var(--theme-hue), 70%, 15%, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, hsla(var(--theme-hue), 80%, 20%, 0.15) 0px, transparent 50%),
+                radial-gradient(at 50% 100%, hsla(260, 50%, 10%, 0.3) 0px, transparent 70%);
+            color: var(--text-main);
             min-height: 100vh;
-            padding: 30px 20px;
+            padding: 40px 20px 120px 20px; /* space for bottom player */
             position: relative;
             overflow-x: hidden;
+            transition: background var(--transition-speed) ease, background-image var(--transition-speed) ease;
         }
 
-        @keyframes gradientShift {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-
-        .mood-emoji-bg {
+        /* Background mood tint layer */
+        #moodTintLayer {
             position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 22rem;
-            opacity: 0.06;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: -1;
+            pointer-events: none;
+            transition: background var(--transition-speed) ease;
+        }
+
+        .emoji-rain-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
             z-index: 0;
             pointer-events: none;
-            animation: moodPulse 4s ease-in-out infinite;
-            transition: opacity 0.8s ease;
         }
 
-        @keyframes moodPulse {
-            0%, 100% { transform: translate(-50%, -50%) scale(1); }
-            50% { transform: translate(-50%, -50%) scale(1.08); }
+        .floating-emoji {
+            position: absolute;
+            font-size: 2rem;
+            opacity: 0.15;
+            will-change: transform;
+            animation-timing-function: linear;
+            animation-fill-mode: forwards;
+        }
+
+        @keyframes floatDown {
+            from { transform: translateY(-10vh) rotate(0deg); }
+            to { transform: translateY(110vh) rotate(360deg); }
+        }
+
+        @keyframes floatUp {
+            from { transform: translateY(110vh) rotate(0deg); }
+            to { transform: translateY(-10vh) rotate(-360deg); }
         }
 
         .container {
             position: relative;
-            z-index: 1;
-        }
-
-        .container-inner {
-            width: 100%;
-            max-width: 980px;
+            z-index: 2;
+            max-width: 1100px;
             margin: 0 auto;
         }
 
-        h1 {
-            font-size: 2rem;
-            color: #a78bfa;
+        /* Header design */
+        header {
             text-align: center;
-            margin-bottom: 6px;
+            margin-bottom: 40px;
         }
 
-        .subtitle {
-            text-align: center;
-            color: #9ca3af;
-            margin-bottom: 30px;
-            font-size: 0.95rem;
+        header h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.8rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            background: linear-gradient(135deg, #fff 30%, var(--primary-light) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 4px 20px var(--primary-glow);
+            margin-bottom: 8px;
+            transition: all var(--transition-speed) ease;
         }
 
-        .panels-row {
+        header p {
+            color: var(--text-muted);
+            font-size: 1.05rem;
+            font-weight: 400;
+        }
+
+        /* Glassmorphism Panel styles */
+        .glass-panel {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 28px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .glass-panel:hover {
+            border-color: var(--border-hover);
+        }
+
+        /* Dashboard grid */
+        .dashboard-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 24px;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 28px;
+            margin-bottom: 30px;
         }
 
-        @media (max-width: 760px) {
-            .panels-row { grid-template-columns: 1fr; }
+        @media (max-width: 900px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
-        .panel {
-            background: #1e1e2e;
-            border: 1px solid #3b3b5c;
-            border-radius: 16px;
-            padding: 22px;
+        /* Left-side companion column stack */
+        .controls-column {
             display: flex;
             flex-direction: column;
+            gap: 24px;
         }
 
-        .panel-title {
-            font-size: 1rem;
+        /* Tabs Interface */
+        .tabs-header {
+            display: flex;
+            background: rgba(0, 0, 0, 0.25);
+            border-radius: 14px;
+            padding: 6px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border-color);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px 8px;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.9rem;
             font-weight: 600;
-            color: #e5e7eb;
-            margin-bottom: 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            justify-content: center;
             gap: 8px;
         }
 
-        .live-pill {
-            font-size: 11px;
+        .tab-btn.active {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 15px var(--primary-glow);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Text Input Area */
+        textarea {
+            width: 100%;
+            min-height: 140px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            color: white;
+            font-size: 0.98rem;
+            padding: 16px;
+            resize: none;
+            outline: none;
+            transition: all 0.3s ease;
+            line-height: 1.5;
+        }
+
+        textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-glow);
+            background: rgba(0, 0, 0, 0.35);
+        }
+
+        /* Quick prompts for text */
+        .quick-prompts {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+            margin-bottom: 20px;
+        }
+
+        .prompt-chip {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .prompt-chip:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        /* Vibe Strategy Selector */
+        .strategy-container {
+            margin-bottom: 24px;
+            background: rgba(0, 0, 0, 0.15);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 16px;
+        }
+
+        .strategy-label {
+            font-size: 0.76rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: var(--text-muted);
+            letter-spacing: 0.06em;
+            display: block;
+            margin-bottom: 12px;
+        }
+
+        .strategy-options {
+            display: flex;
+            gap: 12px;
+        }
+
+        .strategy-card {
+            flex: 1;
+            cursor: pointer;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 12px 8px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .strategy-card.active {
+            border-color: var(--primary);
+            background: var(--primary-glow);
+        }
+
+        .strategy-card-title {
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: var(--text-muted);
+        }
+
+        .strategy-card-desc {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .strategy-card.active .strategy-card-title,
+        .strategy-card.active .strategy-card-desc {
+            color: white;
+        }
+
+        /* Webcam styles */
+        .webcam-feed-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 4/3;
+            border-radius: 16px;
+            overflow: hidden;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #webcamVideo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 16px;
+            transform: scaleX(-1); /* Mirror camera */
+        }
+
+        .webcam-placeholder {
+            position: absolute;
+            text-align: center;
+            color: var(--text-muted);
+            padding: 20px;
+        }
+
+        .webcam-placeholder .cam-large-icon {
+            font-size: 3.5rem;
+            margin-bottom: 12px;
+            display: block;
+            opacity: 0.7;
+        }
+
+        /* Neon holographic face guides */
+        .face-guide-svg {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 65%;
+            height: 65%;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity var(--transition-speed) ease, stroke var(--transition-speed) ease, transform 0.5s ease;
+            stroke: var(--primary);
+            stroke-width: 1.5;
+            fill: none;
+            filter: drop-shadow(0 0 5px var(--primary-glow));
+            z-index: 5;
+        }
+
+        .face-guide-svg.scanning-flash {
+            animation: guideFlash 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes guideFlash {
+            0% { opacity: 0.4; stroke: var(--primary); transform: translate(-50%, -50%) scale(1); }
+            50% { opacity: 0.95; stroke: #10b981; transform: translate(-50%, -50%) scale(1.04); filter: drop-shadow(0 0 12px #10b981); }
+            100% { opacity: 0.4; stroke: var(--primary); transform: translate(-50%, -50%) scale(1); }
+        }
+
+        /* Glowing overlay scanner line */
+        .scanner-glow {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            box-shadow: 0 0 10px 2px var(--primary);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 4;
+        }
+
+        .scanner-glow.scanning {
+            opacity: 1;
+            animation: scanAnimation 2.5s ease-in-out infinite;
+        }
+
+        @keyframes scanAnimation {
+            0% { top: 0%; }
+            50% { top: 100%; }
+            100% { top: 0%; }
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 12px;
+        }
+
+        /* Action Buttons */
+        .btn {
+            flex: 1;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 14px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 15px var(--primary-glow);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-light);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px var(--primary-glow);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: white;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--primary);
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            color: #ef4444;
+        }
+
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-muted);
+            cursor: not-allowed;
+            border-color: transparent;
+            box-shadow: none;
+            transform: none;
+        }
+
+        .live-status-pill {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 4px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            z-index: 6;
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #9ca3af;
+        }
+
+        .pulse-dot.active {
+            background: #10b981;
+            animation: pulseWave 1.5s infinite;
+        }
+
+        @keyframes pulseWave {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); }
+            70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        .hint-text {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        /* Focus Pomodoro Timer Panel */
+        .timer-circle-container {
+            position: relative;
+            width: 140px;
+            height: 140px;
+            margin: 0 auto;
+        }
+
+        .breathing-pulse {
+            animation: breathingCircle 3s ease-in-out infinite alternate;
+        }
+
+        @keyframes breathingCircle {
+            0% { transform: scale(1); filter: drop-shadow(0 0 4px var(--primary-glow)); }
+            100% { transform: scale(1.05); filter: drop-shadow(0 0 14px var(--primary)); }
+        }
+
+        /* Ambient Mixer */
+        .ambient-sliders-wrap {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .ambient-control-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(0,0,0,0.18);
+            padding: 10px 14px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .ambient-meta {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .ambient-emoji {
+            font-size: 1.25rem;
+        }
+
+        .ambient-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .ambient-desc {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 1px;
+        }
+
+        .ambient-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .ambient-slider {
+            width: 80px;
+            accent-color: var(--primary);
+            cursor: pointer;
+        }
+
+        /* Results / Empty state */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            min-height: 350px;
+            text-align: center;
+            color: var(--text-muted);
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 16px;
+            opacity: 0.4;
+            animation: floatSlow 3s ease-in-out infinite;
+        }
+
+        @keyframes floatSlow {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+            100% { transform: translateY(0px); }
+        }
+
+        /* Detected emotion header card */
+        .detected-emotion-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0) 100%);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 24px;
+            text-align: center;
+            margin-bottom: 20px;
+            box-shadow: inset 0 0 15px rgba(255, 255, 255, 0.02);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .detected-emotion-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            border-radius: 20px;
+            padding: 1.5px;
+            background: linear-gradient(135deg, var(--primary), transparent 60%);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+        }
+
+        .emotion-source-badge {
+            display: inline-block;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--primary);
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .emotion-result-name {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: white;
+            text-transform: capitalize;
+            text-shadow: 0 4px 15px var(--primary-glow);
+        }
+
+        .emotion-confidence-val {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* Quote styling */
+        .elegant-quote {
+            font-size: 0.95rem;
+            font-style: italic;
+            color: #d1d5db;
+            background: rgba(255, 255, 255, 0.03);
+            border-left: 4px solid var(--primary);
+            border-radius: 4px 12px 12px 4px;
+            padding: 14px 18px;
+            margin-bottom: 24px;
+            line-height: 1.6;
+        }
+
+        /* Advanced Breakdown bars */
+        .breakdown-section {
+            margin-bottom: 24px;
+        }
+
+        .breakdown-label-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 12px;
+            font-weight: 700;
+        }
+
+        .breakdown-bars-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .mood-bar-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.82rem;
+        }
+
+        .mood-bar-name {
+            width: 72px;
+            text-transform: capitalize;
+            color: #d1d5db;
+            font-weight: 500;
+        }
+
+        .mood-bar-track {
+            flex: 1;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .mood-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--primary-light));
+            border-radius: 6px;
+            transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 0%;
+            box-shadow: 0 0 8px var(--primary-glow);
+        }
+
+        .mood-bar-val {
+            width: 38px;
+            text-align: right;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        /* Song Card List */
+        .playlist-header-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px;
+        }
+
+        .playlist-title {
+            font-size: 0.92rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-muted);
+            font-weight: 700;
+        }
+
+        .songs-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .song-card {
+            background: rgba(0, 0, 0, 0.18);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .song-card:hover {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: var(--primary);
+            transform: translateX(4px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .song-card-art {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            color: var(--primary);
+            font-size: 1.15rem;
+            transition: all 0.3s ease;
+        }
+
+        .song-card:hover .song-card-art {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 0 10px var(--primary-glow);
+            border-color: transparent;
+        }
+
+        .song-card-details {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .song-card-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: white;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .song-card-artist {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .song-card-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .song-play-btn {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--border-color);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            transition: all 0.2s ease;
+        }
+
+        .song-play-btn:hover {
+            background: var(--primary);
+            border-color: transparent;
+            transform: scale(1.15);
+            box-shadow: 0 0 10px var(--primary-glow);
+        }
+
+        .song-yt-btn {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            padding: 8px 12px;
+            border-radius: 10px;
+            transition: all 0.2s ease;
+        }
+
+        .song-yt-btn:hover {
+            color: #ef4444;
+            border-color: rgba(239, 68, 68, 0.4);
+            background: rgba(239, 68, 68, 0.05);
+        }
+
+        /* Mood history & tracker dashboard */
+        .history-section {
+            margin-top: 36px;
+        }
+
+        .stats-summary-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .stat-card-icon {
+            font-size: 1.8rem;
+            width: 46px;
+            height: 46px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+        }
+
+        .stat-card-label {
+            font-size: 0.76rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .stat-card-value {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: white;
+            margin-top: 2px;
+        }
+
+        .history-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .history-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: white;
+        }
+
+        .history-clear-btn {
+            background: rgba(239, 68, 68, 0.05);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            padding: 6px 14px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            color: #ef4444;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .history-clear-btn:hover {
+            background: rgba(239, 68, 68, 0.15);
+            border-color: #ef4444;
+        }
+
+        /* History Timeline Feed */
+        .timeline-container {
+            position: relative;
+            padding-left: 20px;
+        }
+
+        .timeline-container::before {
+            content: '';
+            position: absolute;
+            left: 5px;
+            top: 10px;
+            bottom: 10px;
+            width: 2px;
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-bottom: 20px;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .timeline-dot {
+            position: absolute;
+            left: -19px;
+            top: 6px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--primary);
+            border: 2px solid var(--bg-color);
+            box-shadow: 0 0 0 3px var(--primary-glow);
+        }
+
+        .timeline-card {
+            background: rgba(0, 0, 0, 0.15);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 12px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .timeline-meta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .timeline-time {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            min-width: 60px;
+        }
+
+        .timeline-source-pill {
+            font-size: 0.68rem;
+            padding: 2px 8px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .timeline-mood-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .timeline-emoji {
+            font-size: 1.25rem;
+        }
+
+        .timeline-mood-pill {
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: capitalize;
+            color: white;
+            background: var(--primary-glow);
             padding: 3px 10px;
             border-radius: 20px;
-            background: #2a2a3e;
-            color: #6b7280;
+            border: 1px solid var(--primary);
+        }
+
+        .timeline-confidence {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+
+        .timeline-swing-label {
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .swing-stable { color: var(--text-muted); }
+        .swing-changed { color: var(--primary-light); text-shadow: 0 0 5px var(--primary-glow); }
+        .swing-first { color: #10b981; }
+
+        .timeline-empty {
+            text-align: center;
+            padding: 30px;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        /* Persistent bottom player bar */
+        .bottom-player-bar {
+            position: fixed;
+            bottom: -80px; /* Hidden initially */
+            left: 0;
+            right: 0;
+            height: 76px;
+            background: rgba(10, 10, 18, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.5);
+            transition: bottom 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .bottom-player-bar.active {
+            bottom: 0;
+        }
+
+        .player-track-info {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            width: 30%;
+            min-width: 200px;
+        }
+
+        .player-track-art {
+            width: 44px;
+            height: 44px;
+            border-radius: 8px;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            box-shadow: 0 0 12px var(--primary-glow);
+            animation: pulseArt 2s infinite alternate;
+        }
+
+        @keyframes pulseArt {
+            0% { transform: scale(1); box-shadow: 0 0 8px var(--primary-glow); }
+            100% { transform: scale(1.04); box-shadow: 0 0 15px var(--primary); }
+        }
+
+        .player-track-meta {
+            min-width: 0;
+        }
+
+        .player-track-title {
+            font-size: 0.92rem;
+            font-weight: 600;
+            color: white;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .player-track-artist {
+            font-size: 0.76rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Equalizer Animation */
+        .eq-container {
+            display: flex;
+            align-items: flex-end;
+            gap: 2.5px;
+            height: 14px;
+            margin-left: 12px;
+        }
+
+        .eq-bar {
+            width: 2px;
+            background-color: var(--primary-light);
+            animation: bounceEq 1s ease-in-out infinite alternate;
+            border-radius: 1px;
+        }
+
+        .eq-bar:nth-child(1) { height: 10px; animation-delay: 0.1s; }
+        .eq-bar:nth-child(2) { height: 14px; animation-delay: 0.3s; }
+        .eq-bar:nth-child(3) { height: 8px; animation-delay: 0.0s; }
+        .eq-bar:nth-child(4) { height: 12px; animation-delay: 0.2s; }
+
+        @keyframes bounceEq {
+            0% { transform: scaleY(0.2); }
+            100% { transform: scaleY(1); }
+        }
+
+        .player-controls {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .player-btn-circle {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: white;
+            color: black;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 10px rgba(255, 255, 255, 0.1);
+        }
+
+        .player-btn-circle:hover {
+            transform: scale(1.08);
+            background: var(--primary-light);
+            color: white;
+            box-shadow: 0 4px 15px var(--primary-glow);
+        }
+
+        .player-toggle-drawer {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
             display: flex;
             align-items: center;
             gap: 6px;
         }
 
-        .live-pill.active { color: #34d399; }
-
-        .pulse-dot {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: #4b5563;
+        .player-toggle-drawer:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--primary);
         }
 
-        .live-pill.active .pulse-dot {
-            background: #34d399;
-            animation: pulse 1.4s infinite;
-        }
-
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.5); }
-            70% { box-shadow: 0 0 0 6px rgba(52, 211, 153, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
-        }
-
-        textarea {
-            width: 100%;
-            flex: 1;
-            min-height: 110px;
-            background: #2a2a3e;
-            border: 1px solid #4b4b6e;
-            border-radius: 10px;
-            color: white;
-            font-size: 1rem;
-            padding: 14px;
-            resize: none;
-            outline: none;
-            font-family: 'Segoe UI', sans-serif;
-        }
-
-        textarea::placeholder { color: #6b7280; }
-
-        .submit-btn {
-            margin-top: 14px;
-            width: 100%;
-            padding: 13px;
-            background: #7c3aed;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 0.95rem;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .submit-btn:hover { background: #6d28d9; }
-        .submit-btn:disabled { background: #4b5563; cursor: not-allowed; }
-
-        .webcam-container {
-            position: relative;
-            width: 100%;
-            border-radius: 12px;
-            overflow: hidden;
-            background: #0f0f1a;
-            margin-bottom: 12px;
-        }
-
-        #webcamVideo {
-            width: 100%;
-            border-radius: 12px;
-            display: block;
-        }
-
-        .webcam-placeholder {
-            width: 100%;
-            height: 150px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: #6b7280;
-            background: #2a2a3e;
-            border-radius: 12px;
-            border: 2px dashed #3b3b5c;
-            font-size: 0.85rem;
-            gap: 8px;
-        }
-
-        .cam-icon { font-size: 2.2rem; }
-
-        .scan-overlay {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            border: 2px solid transparent;
-            border-radius: 12px;
-            pointer-events: none;
-            transition: border-color 0.3s;
-        }
-
-        .scan-overlay.scanning {
-            border-color: #7c3aed;
-        }
-
-        .webcam-btns {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 4px;
-        }
-
-        .webcam-btns button {
-            flex: 1;
-            padding: 11px;
-            border: none;
-            border-radius: 10px;
-            font-size: 0.85rem;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        #startCamBtn { background: #059669; color: white; }
-        #startCamBtn:hover { background: #047857; }
-
-        #stopCamBtn {
-            background: #dc2626;
-            color: white;
-            display: none;
-        }
-        #stopCamBtn:hover { background: #b91c1c; }
-
-        canvas { display: none; }
-
-        .scan-hint {
-            font-size: 0.78rem;
-            color: #6b7280;
-            text-align: center;
-            margin-top: 10px;
-        }
-
-        .results-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-
-        @media (max-width: 760px) {
-            .results-row { grid-template-columns: 1fr; }
-        }
-
-        .result-block { display: none; }
-        .result-block.show { display: block; }
-
-        .emotion-badge {
-            background: #1e1e2e;
-            border: 1.5px solid #7c3aed;
-            border-radius: 16px;
-            padding: 18px;
-            margin-bottom: 14px;
-            text-align: center;
-        }
-
-        .emotion-label { font-size: 0.85rem; color: #9ca3af; margin-bottom: 6px; }
-        .emotion-name { font-size: 1.8rem; font-weight: 700; color: #a78bfa; text-transform: capitalize; }
-        .confidence { font-size: 0.8rem; color: #6b7280; margin-top: 4px; }
-
-        .quote-card {
-            background: linear-gradient(135deg, #2a2a3e, #1e1e2e);
-            border-left: 3px solid #7c3aed;
-            border-radius: 10px;
-            padding: 14px 16px;
-            margin-bottom: 16px;
-            font-style: italic;
-            font-size: 0.9rem;
-            color: #d1d5db;
-            line-height: 1.5;
-        }
-
-        .quote-card::before {
-            content: "\201C";
-            color: #7c3aed;
-            font-size: 1.4rem;
-            font-style: normal;
-            margin-right: 4px;
-        }
-
-        .breakdown-card {
-            background: #1e1e2e;
-            border: 1px solid #3b3b5c;
-            border-radius: 12px;
-            padding: 14px 16px;
-            margin-bottom: 16px;
-        }
-
-        .breakdown-title {
-            font-size: 0.78rem;
-            color: #9ca3af;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-        }
-
-        .bar-row {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 7px;
-            font-size: 0.78rem;
-        }
-
-        .bar-label {
-            width: 64px;
-            color: #9ca3af;
-            text-transform: capitalize;
-            flex-shrink: 0;
-        }
-
-        .bar-track {
-            flex: 1;
-            height: 7px;
-            background: #2a2a3e;
-            border-radius: 4px;
+        /* Expanding Video Player Drawer */
+        .player-drawer {
+            position: fixed;
+            bottom: -600px; /* Hidden completely */
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 40px);
+            max-width: 600px;
+            background: #0d0d18;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: none;
+            border-radius: 20px 20px 0 0;
+            z-index: 999;
+            box-shadow: 0 -15px 40px rgba(0, 0, 0, 0.6);
+            transition: bottom 0.4s cubic-bezier(0.16, 1, 0.3, 1);
             overflow: hidden;
         }
 
-        .bar-fill {
-            height: 100%;
-            background: #7c3aed;
-            border-radius: 4px;
-            transition: width 0.6s ease;
+        .player-drawer.expanded {
+            bottom: 76px; /* Sits right on top of player bar */
         }
 
-        .bar-fill.top {
-            background: #a78bfa;
-        }
-
-        .bar-value {
-            width: 36px;
-            text-align: right;
-            color: #6b7280;
-            flex-shrink: 0;
-        }
-
-        .songs-title { font-size: 0.9rem; color: #9ca3af; margin-bottom: 10px; text-align: center; }
-
-        .song-card {
-            background: #1e1e2e;
-            border: 1px solid #3b3b5c;
-            border-radius: 12px;
-            padding: 13px 16px;
-            margin-bottom: 10px;
+        .player-drawer-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 10px;
+            padding: 12px 18px;
+            background: rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid var(--border-color);
         }
 
-        .song-name { font-size: 0.92rem; font-weight: 600; color: white; }
-        .artist-name { font-size: 0.8rem; color: #9ca3af; margin-top: 2px; }
-
-        .listen-btn {
-            padding: 7px 14px;
-            background: #7c3aed;
-            border-radius: 8px;
-            font-size: 0.8rem;
-            text-decoration: none;
-            color: white;
-            white-space: nowrap;
-        }
-        .listen-btn:hover { background: #6d28d9; }
-
-        .error-msg { display: none; color: #f87171; margin-top: 10px; font-size: 0.85rem; text-align: center; }
-        .loading-msg { display: none; color: #9ca3af; margin-top: 10px; font-size: 0.85rem; text-align: center; }
-
-        .chart-title {
+        .player-drawer-title {
             font-size: 0.85rem;
-            color: #9ca3af;
-            margin-bottom: 10px;
+            font-weight: 600;
+            color: var(--text-muted);
         }
 
-        .chart-bars {
-            margin-bottom: 18px;
+        .player-drawer-close {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 1.1rem;
         }
 
-        .chart-row {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 6px;
+        .player-drawer-close:hover {
+            color: white;
         }
 
-        .chart-label {
-            font-size: 0.75rem;
-            color: #d1d5db;
-            text-transform: capitalize;
-            width: 70px;
-            flex-shrink: 0;
+        .video-iframe-container {
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: black;
+            position: relative;
         }
 
-        .chart-track {
-            flex: 1;
-            height: 8px;
-            background: #2a2a3e;
-            border-radius: 6px;
-            overflow: hidden;
-        }
-
-        .chart-fill {
+        .video-iframe-container iframe {
+            width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, #7c3aed, #a78bfa);
-            border-radius: 6px;
-            transition: width 0.6s ease;
-        }
-
-        .chart-value {
-            font-size: 0.72rem;
-            color: #6b7280;
-            width: 40px;
-            text-align: right;
-            flex-shrink: 0;
+            border: none;
         }
     </style>
 </head>
 <body>
-<div class="mood-emoji-bg" id="moodEmojiBg">😐</div>
+
+<div id="moodTintLayer"></div>
+<div class="emoji-rain-layer" id="emojiRainLayer"></div>
+
 <div class="container">
-    <div class="container-inner">
-    <h1>Emotion Music Recommender</h1>
-    <p class="subtitle">Use text, webcam, or both — whichever feels right to you</p>
+    <header>
+        <h1 id="appTitle">HarmonyMind</h1>
+        <p>Intelligent, study-stability music mapped to your emotional frequency</p>
+    </header>
 
-    <div class="panels-row">
-        <div class="panel">
-            <div class="panel-title">
-                <span>✍️ Type how you feel</span>
-            </div>
-            <textarea id="userText" rows="4"
-                placeholder="e.g. I feel really stressed about my exams..."></textarea>
-            <p class="error-msg" id="textError">Please type something first!</p>
-            <p class="loading-msg" id="textLoading">Detecting your emotion...</p>
-            <button class="submit-btn" id="textBtn" onclick="getTextRecommendation()">
-                Find My Music
-            </button>
-        </div>
-
-        <div class="panel">
-            <div class="panel-title">
-                <span>📷 Live webcam detection</span>
-                <span class="live-pill" id="livePill"><span class="pulse-dot"></span><span id="livePillText">Idle</span></span>
-            </div>
-            <div class="webcam-container">
-                <div class="webcam-placeholder" id="camPlaceholder">
-                    <span class="cam-icon">📷</span>
-                    <span>Click "Start Camera" to begin auto-detection</span>
+    <div class="dashboard-grid">
+        <!-- Left: Analysis controls & companion tools -->
+        <div class="controls-column">
+            <!-- Tabs Input Card -->
+            <div class="glass-panel" style="position:relative;">
+                <div class="tabs-header">
+                    <button class="tab-btn active" onclick="switchTab('text')">✍️ Text Mode</button>
+                    <button class="tab-btn" onclick="switchTab('webcam')">📷 Webcam Mode</button>
+                    <button class="tab-btn" onclick="switchTab('fusion')">⚡ Fusion Mode</button>
+                    <button class="tab-btn" onclick="switchTab('analytics')">📊 Analytics</button>
+                    <button class="tab-btn" onclick="switchTab('settings')">⚙️ Settings</button>
                 </div>
-                <video id="webcamVideo" autoplay playsinline style="display:none;"></video>
-                <div class="scan-overlay" id="scanOverlay"></div>
-                <canvas id="captureCanvas"></canvas>
+
+                <!-- Strategy selector -->
+                <div class="strategy-container">
+                    <span class="strategy-label">Vibe Strategy</span>
+                    <div class="strategy-options">
+                        <div class="strategy-card active" id="stratMatchCard" onclick="selectStrategy('match')">
+                            <div class="strategy-card-title">🎯 Match Mood</div>
+                            <div class="strategy-card-desc">Immerse in your current state</div>
+                        </div>
+                        <div class="strategy-card" id="stratShiftCard" onclick="selectStrategy('shift')">
+                            <div class="strategy-card-title">🔄 Shift Mood</div>
+                            <div class="strategy-card-desc">Calm stress, lift sadness</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 1: Text -->
+                <div class="tab-content active" id="textTab">
+                    <textarea id="userText" placeholder="How are you feeling right now? Describe your day, your mood, or what's stressing you..."></textarea>
+                    
+                    <div class="quick-prompts">
+                        <span class="prompt-chip" onclick="fillPrompt('happy')">😊 Productive & Happy</span>
+                        <span class="prompt-chip" onclick="fillPrompt('stressed')">🤯 Exam Stress</span>
+                        <span class="prompt-chip" onclick="fillPrompt('tired')">🥱 Exhausted & Quiet</span>
+                        <span class="prompt-chip" onclick="fillPrompt('anxious')">😨 Anxious / Nervous</span>
+                        <span class="prompt-chip" onclick="fillPrompt('angry')">😡 Code Frustrated</span>
+                    </div>
+
+                    <div class="btn-row">
+                        <button class="btn btn-primary" id="textBtn" onclick="getTextRecommendation()">
+                            <span>🔍 Analyze Mood & Find Music</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tab 2: Webcam -->
+                <div class="tab-content" id="webcamTab">
+                    <div class="webcam-feed-container">
+                        <div class="webcam-placeholder" id="camPlaceholder">
+                            <span class="cam-large-icon">📷</span>
+                            <span>Click 'Start Camera' to enable visual emotion recognition</span>
+                        </div>
+                        <video id="webcamVideo" autoplay playsinline style="display:none;"></video>
+                        
+                        <!-- Real-time Holographic Landmarks Canvas -->
+                        <canvas id="webcamLandmarksCanvas" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:5; transform: scaleX(-1);"></canvas>
+                        
+                        <!-- Sci-Fi Floating HUD Reaction Overlay -->
+                        <div id="hudReactionOverlay" style="position:absolute; top:16px; left:16px; background:rgba(10, 10, 20, 0.75); border:1.5px solid var(--border-color); border-radius:12px; padding:10px 14px; font-family:'Outfit', sans-serif; z-index:6; display:none; flex-direction:column; gap:6px; min-width:140px; box-shadow:0 8px 24px rgba(0,0,0,0.5); backdrop-filter:blur(6px); transition: border-color var(--transition-speed) ease;">
+                            <div style="font-size:0.65rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em; font-weight:700;">Live Expression HUD</div>
+                            <div id="hudReactionText" style="font-size:0.9rem; font-weight:800; color:white; display:flex; align-items:center; gap:6px;">
+                                <span>😐</span> <span>Neutral</span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:8px; margin-top:2px;">
+                                <div style="flex:1; height:4px; background:rgba(255,255,255,0.06); border-radius:2px; overflow:hidden;">
+                                    <div id="hudExpressiveBar" style="height:100%; width:0%; background:var(--primary); transition: width 0.2s ease, background var(--transition-speed) ease;"></div>
+                                </div>
+                                <span id="hudExpressiveVal" style="font-size:0.65rem; color:var(--text-muted); font-weight:700; width:22px; text-align:right;">0%</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Holographic Target Guide -->
+                        <svg class="face-guide-svg" id="faceGuide" viewBox="0 0 100 100">
+                            <path d="M 50 15 C 32 15 25 35 25 55 C 25 78 35 88 50 88 C 65 88 75 78 75 55 C 75 35 68 15 50 15 Z" stroke-dasharray="6 4" />
+                            <path d="M 50 5 L 50 12 M 50 88 L 50 95 M 5 50 L 12 50 M 88 50 L 95 50" />
+                        </svg>
+
+                        <!-- Holographic Heart rate monitor -->
+                        <canvas id="ecgCanvas" style="position:absolute; bottom:0; left:0; width:100%; height:42px; pointer-events:none; z-index:3;"></canvas>
+                        <div id="bpmOverlay" style="position:absolute; bottom:8px; right:12px; background:rgba(0,0,0,0.7); border:1px solid var(--border-color); border-radius:8px; padding:4px 8px; font-family:'Outfit', sans-serif; font-size:0.75rem; font-weight:700; color:var(--primary-light); z-index:4; display:none; letter-spacing:0.04em;">BPM: <span id="bpmValue">72</span></div>
+
+                        <div class="scanner-glow" id="scannerGlow"></div>
+                        
+                        <div class="live-status-pill">
+                            <div class="pulse-dot" id="livePulse"></div>
+                            <span id="livePillText">Offline</span>
+                        </div>
+                    </div>
+
+                    <div class="btn-row">
+                        <button class="btn btn-primary" id="startCamBtn" onclick="startCamera()">▶ Start Camera</button>
+                        <button class="btn btn-danger" id="stopCamBtn" onclick="stopCamera()" style="display:none;">⏹ Stop Camera</button>
+                    </div>
+                    <p class="hint-text" id="scanHint" style="display:none;">Auto-analyzing facial expressions every 5 seconds...</p>
+                </div>
+
+                <!-- Tab 3: Fusion -->
+                <div class="tab-content" id="fusionTab">
+                    <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:16px; line-height:1.5;">
+                        Blend inputs: Describe your feelings below and match it with a webcam snapshot scan for high-fidelity emotion profiling.
+                    </p>
+                    <textarea id="fusionText" placeholder="Write something first, then camera will snapshot during execution..."></textarea>
+                    
+                    <div class="webcam-feed-container" style="aspect-ratio: 16/9; max-height:200px; margin-top:16px;">
+                        <div class="webcam-placeholder" id="fusionCamPlaceholder">
+                            <span class="cam-large-icon" style="font-size:2rem; margin-bottom:6px;">📷</span>
+                            <span style="font-size:0.8rem;">Snapshot feed ready when Camera active</span>
+                        </div>
+                        <video id="fusionWebcamVideo" autoplay playsinline style="display:none; width:100%; height:100%; object-fit:cover; transform:scaleX(-1);"></video>
+                        
+                        <!-- Real-time Holographic Fusion Landmarks Canvas -->
+                        <canvas id="fusionLandmarksCanvas" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:5; transform: scaleX(-1);"></canvas>
+                        
+                        <!-- Fusion Floating HUD Reaction Overlay -->
+                        <div id="fusionHudReactionOverlay" style="position:absolute; top:16px; left:16px; background:rgba(10, 10, 20, 0.75); border:1.5px solid var(--border-color); border-radius:12px; padding:10px 14px; font-family:'Outfit', sans-serif; z-index:6; display:none; flex-direction:column; gap:6px; min-width:140px; box-shadow:0 8px 24px rgba(0,0,0,0.5); backdrop-filter:blur(6px); transition: border-color var(--transition-speed) ease;">
+                            <div style="font-size:0.65rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em; font-weight:700;">Live Expression HUD</div>
+                            <div id="fusionHudReactionText" style="font-size:0.9rem; font-weight:800; color:white; display:flex; align-items:center; gap:6px;">
+                                <span>😐</span> <span>Neutral</span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:8px; margin-top:2px;">
+                                <div style="flex:1; height:4px; background:rgba(255,255,255,0.06); border-radius:2px; overflow:hidden;">
+                                    <div id="fusionHudExpressiveBar" style="height:100%; width:0%; background:var(--primary); transition: width 0.2s ease, background var(--transition-speed) ease;"></div>
+                                </div>
+                                <span id="fusionHudExpressiveVal" style="font-size:0.65rem; color:var(--text-muted); font-weight:700; width:22px; text-align:right;">0%</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Holographic Fusion Guide -->
+                        <svg class="face-guide-svg" id="fusionFaceGuide" viewBox="0 0 100 100">
+                            <path d="M 50 15 C 32 15 25 35 25 55 C 25 78 35 88 50 88 C 65 88 75 78 75 55 C 75 35 68 15 50 15 Z" stroke-dasharray="6 4" />
+                            <path d="M 50 5 L 50 12 M 50 88 L 50 95 M 5 50 L 12 50 M 88 50 L 95 50" />
+                        </svg>
+
+                        <!-- Holographic ECG for Fusion -->
+                        <canvas id="fusionEcgCanvas" style="position:absolute; bottom:0; left:0; width:100%; height:40px; pointer-events:none; z-index:3;"></canvas>
+                        <div id="fusionBpmOverlay" style="position:absolute; bottom:8px; right:12px; background:rgba(0,0,0,0.7); border:1px solid var(--border-color); border-radius:8px; padding:4px 8px; font-family:'Outfit', sans-serif; font-size:0.75rem; font-weight:700; color:var(--primary-light); z-index:4; display:none;">BPM: <span id="fusionBpmValue">72</span></div>
+
+                        <div class="scanner-glow" id="fusionScannerGlow"></div>
+                    </div>
+
+                    <div class="btn-row" style="margin-top:16px; margin-bottom:12px;">
+                        <button class="btn btn-secondary" id="fusionCamBtn" onclick="toggleFusionCamera()">▶ Toggle Camera</button>
+                        <button class="btn btn-primary" id="fusionAnalyzeBtn" onclick="getFusionRecommendation()">⚡ Run Multimodal Fusion</button>
+                    </div>
+                </div>
+
+                <!-- Tab 4: Analytics -->
+                <div class="tab-content" id="analyticsTab">
+                    <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:16px;">
+                        Interactive visualization of your session's emotional telemetry and focus trends.
+                    </p>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 24px;">
+                        <!-- Time Line Chart -->
+                        <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 16px; padding: 16px;">
+                            <div style="font-size: 0.85rem; font-weight: 700; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                <span>📈 Focus Stability & Mood Timeline</span>
+                                <button class="prompt-chip" style="font-size:0.7rem; padding: 2px 8px;" onclick="downloadChart('moodTimelineChart')">Download PNG</button>
+                            </div>
+                            <div style="position: relative; height: 180px; width: 100%;">
+                                <canvas id="moodTimelineChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Weekly Mood Distribution -->
+                        <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 16px; padding: 16px;">
+                            <div style="font-size: 0.85rem; font-weight: 700; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                <span>📊 Weekly Mood Statistics (Frequencies)</span>
+                                <button class="prompt-chip" style="font-size:0.7rem; padding: 2px 8px;" onclick="downloadChart('moodFrequencyChart')">Download PNG</button>
+                            </div>
+                            <div style="position: relative; height: 180px; width: 100%;">
+                                <canvas id="moodFrequencyChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Heatmap / Radar Chart -->
+                        <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 16px; padding: 16px;">
+                            <div style="font-size: 0.85rem; font-weight: 700; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                <span>🕸️ Emotion Heatmap & Distribution</span>
+                                <button class="prompt-chip" style="font-size:0.7rem; padding: 2px 8px;" onclick="downloadChart('moodHeatmapChart')">Download PNG</button>
+                            </div>
+                            <div style="position: relative; height: 180px; width: 100%;">
+                                <canvas id="moodHeatmapChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Export Buttons -->
+                        <div class="btn-row" style="gap: 8px;">
+                            <button class="btn btn-secondary" onclick="exportHistoryCSV()" style="padding:10px;">📤 Export CSV</button>
+                            <button class="btn btn-primary" onclick="downloadSessionPDF()" style="padding:10px;">📄 Download Report PDF</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 5: Settings -->
+                <div class="tab-content" id="settingsTab">
+                    <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:16px;">
+                        Configure application variables and view hotkeys.
+                    </p>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 20px;">
+                        <!-- Theme switch -->
+                        <div class="ambient-control-row">
+                            <div class="ambient-meta">
+                                <span class="ambient-emoji">🌗</span>
+                                <div>
+                                    <div class="ambient-title">Interface Theme</div>
+                                    <div class="ambient-desc">Switch between Dark and Light mode</div>
+                                </div>
+                            </div>
+                            <button class="history-clear-btn" id="themeToggleBtn" onclick="toggleThemeMode()" style="color:var(--primary-light); border-color:var(--primary);">🌙 Dark Mode</button>
+                        </div>
+
+                        <!-- Reset session -->
+                        <div class="ambient-control-row">
+                            <div class="ambient-meta">
+                                <span class="ambient-emoji">🔄</span>
+                                <div>
+                                    <div class="ambient-title">Reset Application State</div>
+                                    <div class="ambient-desc">Clear history, reset variables</div>
+                                </div>
+                            </div>
+                            <button class="history-clear-btn" style="color:#ef4444; border-color:rgba(239, 68, 68, 0.4);" onclick="resetSession()">Reset Session</button>
+                        </div>
+
+                        <!-- Pomodoro preferences -->
+                        <div style="background: rgba(0,0,0,0.18); padding: 16px; border-radius: 12px; border: 1px solid var(--border-color);">
+                            <div style="font-size:0.85rem; font-weight:700; margin-bottom:10px;">⏱️ Timer Settings</div>
+                            <div style="display:flex; justify-content:space-between; gap:12px; font-size:0.8rem;">
+                                <div style="flex:1;">
+                                    <span style="color:var(--text-muted);">Focus Duration (min):</span>
+                                    <input type="number" id="prefFocusTime" value="25" min="1" max="60" style="width:100%; padding:6px; margin-top:4px; background:rgba(0,0,0,0.3); border:1px solid var(--border-color); color:white; border-radius:6px;" onchange="updateTimerPreferences()">
+                                </div>
+                                <div style="flex:1;">
+                                    <span style="color:var(--text-muted);">Break Duration (min):</span>
+                                    <input type="number" id="prefBreakTime" value="5" min="1" max="30" style="width:100%; padding:6px; margin-top:4px; background:rgba(0,0,0,0.3); border:1px solid var(--border-color); color:white; border-radius:6px;" onchange="updateTimerPreferences()">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Keyboard shortcuts list -->
+                        <div style="background: rgba(0,0,0,0.18); padding: 16px; border-radius: 12px; border: 1px solid var(--border-color); font-size:0.8rem;">
+                            <div style="font-size:0.85rem; font-weight:700; margin-bottom:10px;">⌨️ Keyboard Shortcuts</div>
+                            <div style="display:flex; flex-direction:column; gap:6px; color:var(--text-muted);">
+                                <div style="display:flex; justify-content:space-between;"><span>Space</span> <span style="color:white; font-weight:600;">Play/Pause persistent music</span></div>
+                                <div style="display:flex; justify-content:space-between;"><span>Ctrl + Shift + P</span> <span style="color:white; font-weight:600;">Start/Pause Pomodoro timer</span></div>
+                                <div style="display:flex; justify-content:space-between;"><span>Ctrl + Shift + B</span> <span style="color:white; font-weight:600;">Toggle Box-Breathing guide</span></div>
+                                <div style="display:flex; justify-content:space-between;"><span>Ctrl + Shift + X</span> <span style="color:white; font-weight:600;">Open Session Diagnostics</span></div>
+                                <div style="display:flex; justify-content:space-between;"><span>Esc</span> <span style="color:white; font-weight:600;">Close active drawers/modals</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="webcam-btns">
-                <button id="startCamBtn" onclick="startCamera()">▶ Start Camera</button>
-                <button id="stopCamBtn" onclick="stopCamera()">⏹ Stop Camera</button>
+
+            <!-- Pomodoro Timer panel -->
+            <div class="glass-panel" id="pomodoroPanel">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                    <h3 style="font-family:'Outfit', sans-serif; font-size:1.1rem; font-weight:700;">⏱️ Pomodoro Focus Timer</h3>
+                    <span id="timerModeLabel" class="timeline-source-pill" style="color:var(--primary); font-weight:700;">Focus Session</span>
+                </div>
+                <div style="display:flex; flex-direction:column; align-items:center; gap:16px;">
+                    <div class="timer-circle-container" id="timerCircleContainer">
+                        <svg width="140" height="140" viewBox="0 0 140 140" style="transform: rotate(-90deg); width:100%; height:100%;">
+                            <circle cx="70" cy="70" r="62" stroke="rgba(255,255,255,0.04)" stroke-width="6" fill="transparent" />
+                            <circle id="timerProgressCircle" cx="70" cy="70" r="62" stroke="var(--primary)" stroke-width="6" fill="transparent" 
+                                    stroke-dasharray="389.56" stroke-dashoffset="0" stroke-linecap="round" style="transition: stroke-dashoffset 1s linear, stroke var(--transition-speed) ease; filter: drop-shadow(0 0 4px var(--primary-glow));" />
+                        </svg>
+                        <div id="timerDisplay" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-family:'Outfit', sans-serif; font-size:1.8rem; font-weight:800;">25:00</div>
+                    </div>
+                    <div class="btn-row" style="width:100%; gap:8px;">
+                        <button class="btn btn-secondary" onclick="toggleTimer()" id="timerControlBtn" style="padding:10px;">▶ Start</button>
+                        <button class="btn btn-secondary" onclick="resetTimer()" style="padding:10px; background:rgba(255,255,255,0.02)">↺ Reset</button>
+                    </div>
+                </div>
             </div>
-            <p class="scan-hint" id="scanHint" style="display:none;">Auto-scanning your expression every 4 seconds...</p>
-            <p class="error-msg" id="camError"></p>
+
+            <!-- Guided Box-Breathing panel -->
+            <div class="glass-panel" id="breathingPanel">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                    <h3 style="font-family:'Outfit', sans-serif; font-size:1.1rem; font-weight:700;">🧘 Box-Breathing Guide</h3>
+                    <span id="breathingStateLabel" class="timeline-source-pill" style="color:var(--primary); font-weight:700;">Idle</span>
+                </div>
+                <div style="display:flex; flex-direction:column; align-items:center; gap:20px;">
+                    <div class="breathing-orb-wrap" style="position:relative; width:120px; height:120px; display:flex; align-items:center; justify-content:center;">
+                        <div id="breathingOrb" style="width:70px; height:70px; border-radius:50%; background:radial-gradient(circle, var(--primary-light) 0%, var(--primary) 70%); filter:drop-shadow(0 0 15px var(--primary-glow)); transition:all 4s linear; display:flex; align-items:center; justify-content:center;">
+                             <span id="breathingInstruction" style="font-size:0.8rem; font-weight:800; color:white; text-align:center; padding:10px; text-shadow:0 1px 4px rgba(0,0,0,0.5);">Start</span>
+                        </div>
+                    </div>
+                    <div class="btn-row" style="width:100%; gap:8px;">
+                        <button class="btn btn-secondary" onclick="toggleBreathingGuide()" id="breathingControlBtn" style="padding:10px;">▶ Begin Guide</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ambient soundscapes mixer -->
+            <div class="glass-panel">
+                <h3 style="font-family:'Outfit', sans-serif; font-size:1.1rem; font-weight:700; margin-bottom:16px;">🌌 Ambient Soundscapes</h3>
+                <div class="ambient-sliders-wrap">
+                    <div class="ambient-control-row">
+                        <div class="ambient-meta">
+                            <span class="ambient-emoji">🟫</span>
+                            <div>
+                                <div class="ambient-title">Brown Noise</div>
+                                <div class="ambient-desc">Analog focus masking</div>
+                            </div>
+                        </div>
+                        <div class="ambient-actions">
+                            <input type="range" class="ambient-slider" id="brownNoiseVolume" min="0" max="1" step="0.05" value="0" oninput="adjustAmbientVolume('brown')">
+                            <button class="song-play-btn" id="brownNoisePlayBtn" onclick="toggleAmbient('brown')" style="width:28px; height:28px; font-size:0.75rem;">▶</button>
+                        </div>
+                    </div>
+                    <div class="ambient-control-row">
+                        <div class="ambient-meta">
+                            <span class="ambient-emoji">🌧️</span>
+                            <div>
+                                <div class="ambient-title">Cozy Rain</div>
+                                <div class="ambient-desc">Synthetic drops loop</div>
+                            </div>
+                        </div>
+                        <div class="ambient-actions">
+                            <input type="range" class="ambient-slider" id="rainNoiseVolume" min="0" max="1" step="0.05" value="0" oninput="adjustAmbientVolume('rain')">
+                            <button class="song-play-btn" id="rainNoisePlayBtn" onclick="toggleAmbient('rain')" style="width:28px; height:28px; font-size:0.75rem;">▶</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Results Panel -->
+        <div class="glass-panel" id="resultsPanel" style="height:fit-content;">
+            <div class="empty-state" id="resultsEmptyState">
+                <div class="empty-state-icon">🎵</div>
+                <h3>Let's find your sound</h3>
+                <p style="margin-top:8px; font-size:0.88rem; max-width:280px; line-height:1.5;">
+                    Submit text, activate your webcam, or combine both to load a custom study playlist.
+                </p>
+            </div>
+
+            <!-- Result block (hidden by default) -->
+            <div id="resultsContent" style="display:none;">
+                <div class="detected-emotion-card">
+                    <span class="emotion-source-badge" id="resSourceType">Detected Mood</span>
+                    
+                    <!-- Morphing Holographic Vector Avatar -->
+                    <div style="margin: 14px 0; display: flex; justify-content: center; align-items: center;">
+                        <svg id="morphingFace" width="90" height="90" viewBox="0 0 100 100" style="filter: drop-shadow(0 0 6px var(--primary-glow)); transition: all 0.5s ease;">
+                            <!-- Head background border -->
+                            <circle cx="50" cy="50" r="46" fill="rgba(0, 0, 0, 0.25)" stroke="var(--primary)" stroke-width="2.5" style="transition: stroke var(--transition-speed) ease;" />
+                            <!-- Eyes -->
+                            <ellipse id="leftEye" cx="35" cy="42" rx="4" ry="4" fill="var(--primary-light)" style="transition: all 0.5s ease;" />
+                            <ellipse id="rightEye" cx="65" cy="42" rx="4" ry="4" fill="var(--primary-light)" style="transition: all 0.5s ease;" />
+                            <!-- Eyebrows -->
+                            <path id="leftBrow" d="M 28 33 Q 35 32 42 33" stroke="var(--primary-light)" stroke-width="2.5" fill="none" stroke-linecap="round" style="transition: all 0.5s ease;" />
+                            <path id="rightBrow" d="M 58 33 Q 65 32 72 33" stroke="var(--primary-light)" stroke-width="2.5" fill="none" stroke-linecap="round" style="transition: all 0.5s ease;" />
+                            <!-- Mouth -->
+                            <path id="mouth" d="M 35 62 Q 50 62 65 62" stroke="var(--primary-light)" stroke-width="3.5" fill="none" stroke-linecap="round" style="transition: all 0.5s ease;" />
+                        </svg>
+                    </div>
+
+                    <div class="emotion-result-name" id="resEmotionName">Neutral</div>
+                    <div class="emotion-confidence-val" id="resConfidenceText">Confidence: 92%</div>
+                </div>
+
+                <!-- Fine-tune vibe slider overrides -->
+                <div class="strategy-container" id="fineTunerContainer" style="margin-top: 0px; margin-bottom: 20px; display:none; background: rgba(0,0,0,0.22); border: 1.5px solid var(--primary-glow);">
+                    <span class="strategy-label" style="margin-bottom: 8px;">Vibe Fine-Tuner (Manual Override)</span>
+                    <div style="display:flex; flex-direction:column; gap:8px;">
+                        <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-muted); font-weight:600;">
+                            <span id="sliderCalmLabel">🧘 Calm</span>
+                            <span id="sliderHappyLabel">⚡ Uplifting</span>
+                            <span id="sliderEnergeticLabel">🚀 High Energy</span>
+                        </div>
+                        <input type="range" id="manualVibeSlider" min="1" max="3" step="1" value="1" style="width:100%; accent-color:var(--primary); cursor:pointer;" onchange="applyManualVibeTune()">
+                    </div>
+                </div>
+
+                <div class="elegant-quote" id="resQuote">
+                    "Steady minds make the clearest decisions."
+                </div>
+
+                <!-- Explainable AI (XAI) Attributions Panel -->
+                <div id="xaiPanel" style="display:none; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); border-radius: 16px; padding: 18px; margin-bottom: 20px;">
+                    <div style="font-size: 0.78rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted); letter-spacing: 0.06em; margin-bottom: 8px;">Explainable AI: LIME Word Attributions</div>
+                    <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 10px;">Hover words to view how they influence the prediction. Green words strengthen the predicted emotion, red words weaken it.</p>
+                    <div id="xaiAttributedText" style="font-size: 1rem; line-height: 1.6; color: white; display: flex; flex-wrap: wrap; gap: 6px;">
+                        <!-- Attributed words with highlights will be loaded here -->
+                    </div>
+                </div>
+
+                <div class="breakdown-section">
+                    <div class="breakdown-label-row">
+                        <span>Emotion spectrum</span>
+                        <span>Confidence Distribution</span>
+                    </div>
+                    <div class="breakdown-bars-container" id="resBreakdownContainer">
+                        <!-- Bars dynamically loaded -->
+                    </div>
+                </div>
+
+                <div class="playlist-header-row">
+                    <span class="playlist-title" id="playlistTitleLabel">Recommended Study Tracks</span>
+                </div>
+                <div class="songs-grid" id="resSongsList">
+                    <!-- Songs dynamically loaded -->
+                </div>
+            </div>
         </div>
     </div>
 
-    <div class="results-row">
-        <div class="result-block" id="textResultBlock">
-            <div class="emotion-badge">
-                <p class="emotion-label">Detected from text</p>
-                <p class="emotion-name" id="textEmotionName"></p>
-                <p class="confidence" id="textConfidenceText"></p>
+    <!-- Bottom: Mood History Analytics -->
+    <div class="glass-panel history-section">
+        <div class="stats-summary-row">
+            <div class="stat-card">
+                <div class="stat-card-icon">📈</div>
+                <div>
+                    <div class="stat-card-label">Focus Stability</div>
+                    <div class="stat-card-value" id="statsStability">100%</div>
+                </div>
             </div>
-            <div class="quote-card" id="textQuote"></div>
-            <div id="textBreakdown"></div>
-            <p class="songs-title">Recommended for you</p>
-            <div id="textSongsList"></div>
+            <div class="stat-card">
+                <div class="stat-card-icon">🧠</div>
+                <div>
+                    <div class="stat-card-label">Dominant Mood</div>
+                    <div class="stat-card-value" id="statsDominant">Calm & Focused</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-card-icon">🔢</div>
+                <div>
+                    <div class="stat-card-label">Total Logs</div>
+                    <div class="stat-card-value" id="statsCount">0</div>
+                </div>
+            </div>
         </div>
 
-        <div class="result-block" id="camResultBlock">
-            <div class="emotion-badge">
-                <p class="emotion-label">Detected from webcam</p>
-                <p class="emotion-name" id="camEmotionName"></p>
-                <p class="confidence" id="camConfidenceText"></p>
+        <div class="history-card-header">
+            <h3 class="history-title">Session Mood History</h3>
+            <div style="display:flex; align-items:center;">
+                <button class="history-clear-btn" style="background:var(--primary-glow); border-color:var(--primary); color:white; margin-right:8px;" onclick="generateFocusDiagnostics()">📊 Diagnostics</button>
+                <button class="history-clear-btn" onclick="clearHistory()">Clear History</button>
             </div>
-            <div class="quote-card" id="camQuote"></div>
-            <div id="camBreakdown"></div>
-            <p class="songs-title">Recommended for you</p>
-            <div id="camSongsList"></div>
         </div>
-    </div>
+
+        <div class="timeline-container" id="historyTimeline">
+            <div class="timeline-empty" id="historyEmpty">
+                No telemetry data. Run text or webcam scans to record mood shifts over time.
+            </div>
+        </div>
     </div>
 </div>
 
-<script>
-    let stream = null;
-    let scanInterval = null;
-    let isScanning = false;
+<!-- Expandable Drawer YouTube Player -->
+<div class="player-drawer" id="playerDrawer">
+    <div class="player-drawer-header">
+        <span class="player-drawer-title" id="drawerTrackName">Now playing: Lo-Fi Study Beats</span>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <button class="player-btn-circle" id="drawerPlayPauseBtn" onclick="togglePlayPause()" style="width: 32px; height: 32px; font-size: 0.8rem; background: var(--primary); color: white; display: none; align-items: center; justify-content: center; border: none;">⏸</button>
+            <button class="player-drawer-close" onclick="togglePlayerDrawer()">✕</button>
+        </div>
+    </div>
+    <div class="video-iframe-container">
+        <!-- We use YouTube iframe embed with placeholder initially -->
+        <iframe id="youtubeIframe" src="" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+    </div>
+    <div style="padding: 12px; text-align: center; background: rgba(0, 0, 0, 0.25); border-top: 1px solid var(--border-color); display: flex; flex-direction: column; align-items: center; gap: 8px;">
+        <span style="font-size: 0.78rem; color: var(--text-muted);">If the video doesn't play (restricted by owner), click below:</span>
+        <a id="playerDrawerYtLink" href="" target="_blank" class="btn btn-secondary" style="display: inline-flex; width: auto; padding: 6px 14px; font-size: 0.8rem; border-color: rgba(239, 68, 68, 0.4); color: #ef4444; background: rgba(239, 68, 68, 0.06); gap: 6px; text-decoration: none;">
+            <span>🔺</span> Open on YouTube
+        </a>
+    </div>
+</div>
 
+<!-- Diagnostics Modal Drawer -->
+<div id="diagnosticsModal" class="player-drawer" style="bottom: -460px; max-width: 500px; height: 420px; border-radius: 20px 20px 0 0; z-index: 1001; transition: bottom 0.4s cubic-bezier(0.16, 1, 0.3, 1);">
+    <div class="player-drawer-header">
+        <span class="player-drawer-title" style="font-family:'Outfit'; font-weight:700; font-size:1.05rem; color:white;">📊 Session Focus Diagnostics</span>
+        <button class="player-drawer-close" onclick="closeDiagnostics()">✕</button>
+    </div>
+    <div style="padding: 24px; display:flex; flex-direction:column; gap:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+             <div>
+                  <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Focus Quality Grade</div>
+                  <div id="diagnosticsGrade" style="font-family:'Outfit'; font-size:2rem; font-weight:800; color:var(--primary-light);">A</div>
+             </div>
+             <div style="text-align:right;">
+                  <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Stability Score</div>
+                  <div id="diagnosticsStabilityVal" style="font-family:'Outfit'; font-size:1.4rem; font-weight:700; color:white;">100%</div>
+             </div>
+        </div>
+        
+        <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:14px; padding:16px;">
+             <div style="font-size:0.85rem; font-weight:700; margin-bottom:8px; display:flex; align-items:center; gap:6px;">🧠 Cognitive Loading Index</div>
+             <div style="display:flex; flex-direction:column; gap:8px; font-size:0.8rem;">
+                  <div style="display:flex; justify-content:space-between;">
+                       <span style="color:var(--text-muted);">Anxiety/Stress Level:</span>
+                       <span id="diagAnxietyScore" style="font-weight:700; color:white;">Low (12%)</span>
+                  </div>
+                  <div style="display:flex; justify-content:space-between;">
+                       <span style="color:var(--text-muted);">Calm/Flow State:</span>
+                       <span id="diagCalmScore" style="font-weight:700; color:white;">High (88%)</span>
+                  </div>
+                  <div style="display:flex; justify-content:space-between;">
+                       <span style="color:var(--text-muted);">Emotional Swings Detected:</span>
+                       <span id="diagSwingsScore" style="font-weight:700; color:white;">0</span>
+                  </div>
+             </div>
+        </div>
+        
+        <div>
+             <div style="font-size:0.78rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); letter-spacing:0.04em; margin-bottom:6px;">Personalized Study Advice</div>
+             <p id="diagnosticsAdvice" style="font-size:0.85rem; line-height:1.5; color:var(--text-main); font-style:italic;">
+                  "Your study focus shows excellent stability. Continue with standard 25-minute Pomodoro sessions."
+             </p>
+        </div>
+    </div>
+</div>
+
+<!-- Bottom fixed player controls bar -->
+<div class="bottom-player-bar" id="bottomPlayerBar">
+    <div class="player-track-info">
+        <div class="player-track-art" id="playerTrackArt">
+            <span>🎵</span>
+        </div>
+        <div class="player-track-meta">
+            <div class="player-track-title" id="playerBarTitle">No Track Selected</div>
+            <div class="player-track-artist" id="playerBarArtist">Choose a song above</div>
+        </div>
+        <div class="eq-container" id="playerEq" style="display:none;">
+            <div class="eq-bar"></div>
+            <div class="eq-bar"></div>
+            <div class="eq-bar"></div>
+            <div class="eq-bar"></div>
+        </div>
+    </div>
+
+    <div class="player-controls" style="display:flex; gap:10px; align-items:center;">
+        <!-- YouTube Direct Link Fallback -->
+        <a id="playerBarYtLink" href="" target="_blank" class="player-toggle-drawer" style="text-decoration:none; display:none; background:rgba(239, 68, 68, 0.18); border:1px solid rgba(239, 68, 68, 0.4); color:#ef4444; align-items:center; gap:6px;">
+            <span>🔺</span>
+            <span>Open in YouTube</span>
+        </a>
+        <!-- Custom play/pause/resume button -->
+        <button class="player-btn-circle" id="barPlayPauseBtn" onclick="togglePlayPause()" style="display: none; align-items: center; justify-content: center; font-size: 1.1rem; border: none;">⏸</button>
+        <!-- Floating overlay toggle button -->
+        <button class="player-toggle-drawer" onclick="togglePlayerDrawer()">
+            <span>📺</span>
+            <span id="playerVideoBtnText">Expand Player</span>
+        </button>
+    </div>
+
+</div>
+
+<!-- Hidden Canvas for frame snapshot capture -->
+<canvas id="captureCanvas" style="display:none;"></canvas>
+
+<script>
+// State management
+    let activeTab = 'text';
+    let localStream = null;
+    let webcamInterval = null;
+    let isWebcamScanning = false;
+    let isFusionCamActive = false;
+    let fusionStream = null;
+    let moodHistory = [];
+    let currentThemeEmotion = 'neutral';
+    let selectedStrategy = 'match';
+
+    // Face Landmarker state
+    let faceLandmarker = null;
+    let filesetResolver = null;
+    let lastVideoTime = -1;
+    let isLandmarkerLoading = false;
+    let webcamAnimFrameId = null;
+    let fusionAnimFrameId = null;
+    let currentClientMetrics = { smileScore: 0.0, eyebrowFurrow: 1.0, surpriseScore: 0.0, isSadLipsDown: false };
+
+    // Landmarks contours for drawing the glowing holographic face mesh
+    const LIP_OUTER = [61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 308, 324, 318, 402, 317, 14, 87, 178, 95, 88, 61];
+    const LIP_INNER = [78, 95, 88, 178, 87, 14, 317, 402, 318, 324, 308, 415, 310, 311, 312, 13, 82, 81, 80, 191, 78];
+    const EYE_LEFT = [33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 159, 160, 161, 246, 33];
+    const EYE_RIGHT = [362, 382, 381, 380, 374, 373, 390, 249, 263, 466, 388, 387, 386, 385, 384, 398, 362];
+    const BROW_LEFT = [70, 63, 105, 66, 107, 55, 65, 52, 53, 46];
+    const BROW_RIGHT = [300, 293, 334, 296, 336, 285, 295, 282, 283, 276];
+    const FACE_CONTOUR = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109, 10];
+    const NOSE = [168, 6, 197, 195, 5, 4, 1, 19, 94, 2];
+
+    async function initializeFaceLandmarker() {
+        if (faceLandmarker) return faceLandmarker;
+        if (isLandmarkerLoading) return null;
+        isLandmarkerLoading = true;
+        
+        console.log("Loading MediaPipe Face Landmarker CDN...");
+        try {
+            const visionModule = await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.8/vision_bundle.mjs");
+            filesetResolver = await visionModule.FilesetResolver.forVisionTasks(
+                "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.8/wasm"
+            );
+            faceLandmarker = await visionModule.FaceLandmarker.createFromOptions(filesetResolver, {
+                baseOptions: {
+                    modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+                    delegate: "GPU"
+                },
+                runningMode: "VIDEO",
+                numFaces: 1
+            });
+            console.log("MediaPipe Face Landmarker initialized successfully.");
+            return faceLandmarker;
+        } catch (err) {
+            console.error("Failed to load Face Landmarker:", err);
+            isLandmarkerLoading = false;
+            return null;
+        }
+    }
+
+    function getDistance(p1, p2) {
+        return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2 + (p1.z - p2.z) ** 2);
+    }
+
+    function drawHolographicMesh(ctx, landmarks, width, height) {
+        const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim();
+        ctx.strokeStyle = primaryColor;
+        ctx.lineWidth = 1.0;
+        ctx.shadowColor = primaryColor;
+        ctx.shadowBlur = 4;
+        
+        const drawContour = (indices, close = false) => {
+            ctx.beginPath();
+            indices.forEach((idx, i) => {
+                const pt = landmarks[idx];
+                const x = pt.x * width;
+                const y = pt.y * height;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            if (close) ctx.closePath();
+            ctx.stroke();
+        };
+
+        drawContour(FACE_CONTOUR, true);
+        drawContour(LIP_OUTER, true);
+        drawContour(LIP_INNER, true);
+        drawContour(EYE_LEFT, true);
+        drawContour(EYE_RIGHT, true);
+        drawContour(BROW_LEFT, false);
+        drawContour(BROW_RIGHT, false);
+        drawContour(NOSE, false);
+
+        // Draw glowing nodes at key indices
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowBlur = 6;
+        const keyNodes = [4, 33, 133, 263, 362, 61, 291, 152, 10, 197];
+        keyNodes.forEach(idx => {
+            const pt = landmarks[idx];
+            ctx.beginPath();
+            ctx.arc(pt.x * width, pt.y * height, 2, 0, 2 * Math.PI);
+            ctx.fill();
+        });
+        ctx.shadowBlur = 0;
+    }
+
+    function computeExpressionMetrics(landmarks, mode) {
+        const p61 = landmarks[61];
+        const p291 = landmarks[291];
+        const p10 = landmarks[10];
+        const p152 = landmarks[152];
+        const p55 = landmarks[55];
+        const p285 = landmarks[285];
+        const p13 = landmarks[13];
+        const p14 = landmarks[14];
+        
+        // Eyebrow and eye heights
+        const p159 = landmarks[159];
+        const p145 = landmarks[145];
+        const p386 = landmarks[386];
+        const p374 = landmarks[374];
+        const p52 = landmarks[52];
+        const p282 = landmarks[282];
+        const p4 = landmarks[4];
+        const p234 = landmarks[234];
+        const p454 = landmarks[454];
+        const p33 = landmarks[33];
+        const p263 = landmarks[263];
+
+        const lipWidth = getDistance(p61, p291);
+        const faceHeight = getDistance(p10, p152);
+        const browDist = getDistance(p55, p285);
+        const mouthOpen = getDistance(p13, p14);
+        
+        // Calculated heights
+        const leftEyeHeight = getDistance(p159, p145);
+        const rightEyeHeight = getDistance(p386, p374);
+        const averageEyeHeight = (leftEyeHeight + rightEyeHeight) / 2.0;
+        
+        const leftBrowHeight = getDistance(p159, p52);
+        const rightBrowHeight = getDistance(p386, p282);
+        const averageBrowHeight = (leftBrowHeight + rightBrowHeight) / 2.0;
+        
+        // Leaning / Hand on Cheek Metrics (Tilt & Cheek asymmetry)
+        const leftCheekDist = getDistance(p4, p234);
+        const rightCheekDist = getDistance(p4, p454);
+        const cheekAsymmetry = leftCheekDist > 0 ? Math.max(leftCheekDist / rightCheekDist, rightCheekDist / leftCheekDist) : 1.0;
+        const eyeTilt = faceHeight > 0 ? (Math.abs(p33.y - p263.y) / faceHeight) : 0.0;
+
+        // Ratios relative to face size
+        const rawSmile = faceHeight > 0 ? (lipWidth / faceHeight) : 0.35;
+        const smile = Math.min(Math.max((rawSmile - 0.34) / 0.16, 0.0), 1.0);
+
+        const rawBrow = faceHeight > 0 ? (browDist / faceHeight) : 0.16;
+        const furrow = Math.min(Math.max(rawBrow / 0.165, 0.1), 1.2); 
+
+        const rawMouth = faceHeight > 0 ? (mouthOpen / faceHeight) : 0.01;
+        const surprise = Math.min(Math.max((rawMouth - 0.02) / 0.12, 0.0), 1.0);
+
+        // Normalize ratios for threshold tests
+        const mouthRatio = faceHeight > 0 ? (mouthOpen / faceHeight) : 0.01;
+        const browHeightRatio = faceHeight > 0 ? (averageBrowHeight / faceHeight) : 0.08;
+        const eyeHeightRatio = faceHeight > 0 ? (averageEyeHeight / faceHeight) : 0.045;
+        
+        const leftBrowHeightRatio = faceHeight > 0 ? (leftBrowHeight / faceHeight) : 0.08;
+        const rightBrowHeightRatio = faceHeight > 0 ? (rightBrowHeight / faceHeight) : 0.08;
+        const isAsymmetricBrows = Math.abs(leftBrowHeightRatio - rightBrowHeightRatio) > 0.02;
+
+        // Custom states detection based on user rules
+        let isSurpriseOverridden = false;
+        let isSadHandOnCheek = false;
+        let isSadLipsDown = false;
+        let isAngrySquint = false;
+        let isAsymmetricAngry = false;
+
+        // Rule 1: mouth open AND eyebrow up -> Surprise!
+        if (mouthRatio > 0.035 && browHeightRatio > 0.09) {
+            isSurpriseOverridden = true;
+        }
+
+        // Rule 2: cheek asymmetry > 1.12 OR eye tilt > 0.14 -> Leaning / Hand on Cheek -> Sad!
+        if (cheekAsymmetry > 1.12 || eyeTilt > 0.14) {
+            isSadHandOnCheek = true;
+        }
+
+        // Rule 3: mouth open AND eyes are small AND eyebrows down -> Angry!
+        if (mouthRatio > 0.025 && eyeHeightRatio < 0.033 && browHeightRatio < 0.073) {
+            isAngrySquint = true;
+        }
+
+        // Rule 4: 1 eyebrow up and another down -> Angry!
+        if (isAsymmetricBrows) {
+            isAsymmetricAngry = true;
+        }
+
+        // Rule 5: corners of mouth are pulled down relative to mouth center -> Lips Down -> Sad!
+        const mouthCenterY = (p13.y + p14.y) / 2;
+        const mouthCornersY = (p61.y + p291.y) / 2;
+        const lipsDownRatio = faceHeight > 0 ? (mouthCornersY - mouthCenterY) / faceHeight : 0.0;
+        if (lipsDownRatio > 0.015) {
+            isSadLipsDown = true;
+        }
+
+        currentClientMetrics = {
+            smileScore: parseFloat(smile.toFixed(2)),
+            eyebrowFurrow: parseFloat(furrow.toFixed(2)),
+            surpriseScore: parseFloat(surprise.toFixed(2)),
+            isSurpriseOverridden: isSurpriseOverridden,
+            isSadHandOnCheek: isSadHandOnCheek,
+            isSadLipsDown: isSadLipsDown,
+            isAngrySquint: isAngrySquint,
+            isAsymmetricAngry: isAsymmetricAngry
+        };
+
+        let emoji = '😐';
+        let stateText = 'Neutral';
+        let expressiveness = 0;
+
+        if (isSurpriseOverridden) {
+            emoji = '😲';
+            stateText = 'Surprised (Mouth Open + Raised Brows)';
+            expressiveness = 90;
+        } else if (isSadHandOnCheek) {
+            emoji = '😢';
+            stateText = 'Sadness (Leaning / Hand on Cheek)';
+            expressiveness = 85;
+        } else if (isSadLipsDown) {
+            emoji = '😢';
+            stateText = 'Sadness (Lips Down / Frown)';
+            expressiveness = 85;
+        } else if (isAngrySquint) {
+            emoji = '😡';
+            stateText = 'Angry (Open Mouth + Down Brows + Squint)';
+            expressiveness = 95;
+        } else if (isAsymmetricAngry) {
+            emoji = '😡';
+            stateText = 'Angry (Asymmetric Eyebrows)';
+            expressiveness = 95;
+        } else if (smile > 0.3) {
+            emoji = '😊';
+            stateText = 'Smiling';
+            expressiveness = Math.round(smile * 100);
+        } else if (furrow < 0.78) {
+            emoji = '🤨';
+            stateText = 'Focused / Furrowed';
+            expressiveness = Math.round((1.0 - furrow) * 120);
+        } else if (surprise > 0.25) {
+            emoji = '😲';
+            stateText = 'Surprised';
+            expressiveness = Math.round(surprise * 100);
+        } else {
+            emoji = '😐';
+            stateText = 'Neutral / Calm';
+            expressiveness = 5 + Math.round((0.5 - Math.min(Math.abs(rawBrow - 0.16), 0.5)) * 20);
+        }
+        
+        expressiveness = Math.min(Math.max(expressiveness, 0), 100);
+
+        const hudText = document.getElementById(mode === 'webcam' ? 'hudReactionText' : 'fusionHudReactionText');
+        const hudBar = document.getElementById(mode === 'webcam' ? 'hudExpressiveBar' : 'fusionHudExpressiveBar');
+        const hudVal = document.getElementById(mode === 'webcam' ? 'hudExpressiveVal' : 'fusionHudExpressiveVal');
+        
+        if (hudText && hudBar && hudVal) {
+            hudText.innerHTML = `<span>${emoji}</span> <span>${stateText}</span>`;
+            hudBar.style.width = `${expressiveness}%`;
+            hudVal.textContent = `${expressiveness}%`;
+        }
+    }
+
+    async function trackFaceLandmarks(mode) {
+        const video = document.getElementById(mode === 'webcam' ? 'webcamVideo' : 'fusionWebcamVideo');
+        const canvas = document.getElementById(mode === 'webcam' ? 'webcamLandmarksCanvas' : 'fusionLandmarksCanvas');
+        const hud = document.getElementById(mode === 'webcam' ? 'hudReactionOverlay' : 'fusionHudReactionOverlay');
+        
+        if (!video || !canvas || video.paused || video.ended || !faceLandmarker) {
+            if ((mode === 'webcam' && localStream) || (mode === 'fusion' && fusionStream)) {
+                if (mode === 'webcam') {
+                    webcamAnimFrameId = requestAnimationFrame(() => trackFaceLandmarks(mode));
+                } else {
+                    fusionAnimFrameId = requestAnimationFrame(() => trackFaceLandmarks(mode));
+                }
+            }
+            return;
+        }
+        
+        if (video.videoWidth === 0 || video.videoHeight === 0) {
+            if (mode === 'webcam') {
+                webcamAnimFrameId = requestAnimationFrame(() => trackFaceLandmarks(mode));
+            } else {
+                fusionAnimFrameId = requestAnimationFrame(() => trackFaceLandmarks(mode));
+            }
+            return;
+        }
+
+        if (canvas.width !== video.clientWidth || canvas.height !== video.clientHeight) {
+            canvas.width = video.clientWidth;
+            canvas.height = video.clientHeight;
+        }
+
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        let timestamp = performance.now();
+        if (video.currentTime !== lastVideoTime) {
+            lastVideoTime = video.currentTime;
+            const detections = faceLandmarker.detectForVideo(video, timestamp);
+            
+            if (detections && detections.faceLandmarks && detections.faceLandmarks.length > 0) {
+                const landmarks = detections.faceLandmarks[0];
+                drawHolographicMesh(ctx, landmarks, canvas.width, canvas.height);
+                computeExpressionMetrics(landmarks, mode);
+                hud.style.display = 'flex';
+            } else {
+                hud.style.display = 'none';
+                currentClientMetrics = { smileScore: 0.0, eyebrowFurrow: 1.0, surpriseScore: 0.0 };
+            }
+        }
+
+        if (mode === 'webcam' && localStream) {
+            webcamAnimFrameId = requestAnimationFrame(() => trackFaceLandmarks(mode));
+        } else if (mode === 'fusion' && fusionStream) {
+            fusionAnimFrameId = requestAnimationFrame(() => trackFaceLandmarks(mode));
+        }
+    }
+    
+    // Config mappings
+    const moodEmojis = {
+        joy: ['😄', '😁', '🥳', '✨', '💛'], happy: ['😄', '😁', '🥳', '✨', '💛'],
+        sadness: ['😢', '😞', '💧', '🌧️', '💙'], sad: ['😢', '😞', '💧', '🌧️', '💙'],
+        anger: ['😠', '😡', '🔥', '❤️'], angry: ['😠', '😡', '🔥', '❤️'],
+        fear: ['😨', '😰', '💜'],
+        love: ['🥰', '💖', '😍', '💗'],
+        surprise: ['😲', '😮', '⚡', '💚'],
+        disgust: ['😖', '🤢', '🤢'],
+        neutral: ['😐', '🙂', '😶', '🩶']
+    };
+
+    const emotionThemes = {
+        joy: { hue: 45, tint: 'rgba(250, 204, 21, 0.05)' },
+        happy: { hue: 45, tint: 'rgba(250, 204, 21, 0.05)' },
+        love: { hue: 330, tint: 'rgba(244, 63, 94, 0.05)' },
+        sadness: { hue: 215, tint: 'rgba(59, 130, 246, 0.05)' },
+        sad: { hue: 215, tint: 'rgba(59, 130, 246, 0.05)' },
+        anger: { hue: 0, tint: 'rgba(239, 68, 68, 0.05)' },
+        angry: { hue: 0, tint: 'rgba(239, 68, 68, 0.05)' },
+        fear: { hue: 270, tint: 'rgba(139, 92, 246, 0.05)' },
+        surprise: { hue: 175, tint: 'rgba(20, 184, 166, 0.05)' },
+        disgust: { hue: 90, tint: 'rgba(132, 204, 22, 0.05)' },
+        neutral: { hue: 260, tint: 'rgba(100, 116, 139, 0.03)' }
+    };
+
+    const promptFills = {
+        happy: "I had a super productive day today! I completed all my assignments and I'm feeling excited, positive, and full of good energy.",
+        stressed: "I'm feeling so overwhelmed with upcoming exams and projects. The deadlines are closing in and I can feel my anxiety levels rising.",
+        tired: "I've been staring at a laptop screen for six hours straight. My brain is completely empty and I just need some calming study beats to rest my head.",
+        anxious: "My presentation is tomorrow morning and my heart is beating fast. I'm feeling very nervous, worried, and insecure.",
+        angry: "I am extremely frustrated! My code has a bug I've been trying to fix for three hours, and nothing is working. I need to blow off steam and refocus."
+    };
+
+    // Tab switcher logic
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        
+        activeTab = tabId;
+        
+        // Find correct tab button and activate it
+        const targetBtn = Array.from(document.querySelectorAll('.tab-btn')).find(btn => btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(tabId));
+        if (targetBtn) targetBtn.classList.add('active');
+        
+        document.getElementById(tabId + 'Tab').classList.add('active');
+        
+        // Clean up camera streams if changing tabs
+        if(tabId !== 'webcam') {
+            stopCamera();
+        }
+        if(tabId !== 'fusion') {
+            stopFusionCamera();
+        }
+        
+        // Trigger Chart updates if switching to Analytics tab
+        if(tabId === 'analytics') {
+            updateAnalyticsCharts();
+        }
+    }
+
+    // Fill sample prompts
+    function fillPrompt(key) {
+        const text = promptFills[key];
+        if (activeTab === 'text') {
+            document.getElementById('userText').value = text;
+        } else if (activeTab === 'fusion') {
+            document.getElementById('fusionText').value = text;
+        }
+    }
+
+    // Vibe Strategy updater
+    function selectStrategy(strategy) {
+        selectedStrategy = strategy;
+        const matchCard = document.getElementById('stratMatchCard');
+        const shiftCard = document.getElementById('stratShiftCard');
+        
+        if (strategy === 'match') {
+            matchCard.classList.add('active');
+            shiftCard.classList.remove('active');
+        } else {
+            shiftCard.classList.add('active');
+            matchCard.classList.remove('active');
+        }
+    }
+
+    // Dynamic UI styling & theme shift
+    function setEmotionTheme(emotion) {
+        currentThemeEmotion = emotion;
+        const theme = emotionThemes[emotion] || emotionThemes.neutral;
+        
+        // Transition CSS theme hue and overlay tint
+        document.documentElement.style.setProperty('--theme-hue', theme.hue);
+        document.getElementById('moodTintLayer').style.background = theme.tint;
+        
+        // Dynamic float emojis
+        triggerEmojiRain(emotion);
+    }
+
+    // Falling emoji system
+    let emojiIntervalId = null;
+    function triggerEmojiRain(emotion) {
+        if(emojiIntervalId) {
+            clearInterval(emojiIntervalId);
+        }
+        
+        const layer = document.getElementById('emojiRainLayer');
+        layer.innerHTML = ''; // clear current animations
+        
+        const set = moodEmojis[emotion] || moodEmojis.neutral;
+        
+        // initial spawn
+        for (let i = 0; i < 4; i++) {
+            spawnEmoji(layer, set);
+        }
+        
+        // recurring spawn
+        emojiIntervalId = setInterval(() => {
+            spawnEmoji(layer, set);
+        }, 2200);
+    }
+
+    function spawnEmoji(container, emojiSet) {
+        if (container.children.length > 25) {
+            container.children[0].remove();
+        }
+        
+        const emojiStr = emojiSet[Math.floor(Math.random() * emojiSet.length)];
+        const el = document.createElement('span');
+        el.className = 'floating-emoji';
+        el.textContent = emojiStr;
+
+        const leftPos = Math.random() * 94 + 3;
+        const scale = 0.8 + Math.random() * 1.5;
+        const duration = 10 + Math.random() * 12;
+        const runUp = Math.random() < 0.4; // 40% chance floating upwards
+
+        el.style.left = leftPos + 'vw';
+        el.style.fontSize = scale + 'rem';
+        el.style.top = runUp ? '110vh' : '-10vh';
+        el.style.animation = `${runUp ? 'floatUp' : 'floatDown'} ${duration}s linear forwards`;
+        
+        container.appendChild(el);
+        setTimeout(() => el.remove(), duration * 1000 + 100);
+    }
+
+    // Webcam Capture & Analysis
     async function startCamera() {
         try {
-            stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            const constraints = { video: true };
+            localStream = await navigator.mediaDevices.getUserMedia(constraints);
+            
             const video = document.getElementById('webcamVideo');
-            video.srcObject = stream;
+            video.srcObject = localStream;
             video.style.display = 'block';
+            
             document.getElementById('camPlaceholder').style.display = 'none';
             document.getElementById('startCamBtn').style.display = 'none';
             document.getElementById('stopCamBtn').style.display = 'block';
             document.getElementById('scanHint').style.display = 'block';
-            document.getElementById('livePill').classList.add('active');
-            document.getElementById('livePillText').textContent = 'Live';
-
-            captureAndAnalyze();
-            scanInterval = setInterval(captureAndAnalyze, 4000);
+            
+            document.getElementById('faceGuide').style.opacity = '0.4';
+            document.getElementById('bpmOverlay').style.display = 'block';
+            initECG('ecgCanvas');
+            
+            const livePulse = document.getElementById('livePulse');
+            livePulse.classList.add('active');
+            document.getElementById('livePillText').textContent = 'Live Feed';
+            
+            // Initialize MediaPipe and start drawing the holographic mesh
+            const landmarker = await initializeFaceLandmarker();
+            if (landmarker) {
+                lastVideoTime = -1;
+                webcamAnimFrameId = requestAnimationFrame(() => trackFaceLandmarks('webcam'));
+            }
+            
+            // start automatic interval analysis
+            captureAndScanCam();
+            webcamInterval = setInterval(captureAndScanCam, 5000);
         } catch (err) {
-            document.getElementById('camError').textContent = 'Camera access denied. Please allow camera permission.';
-            document.getElementById('camError').style.display = 'block';
+            console.error("Camera access error:", err);
+            let msg = 'Could not access your camera: ' + err.message;
+            if (err.name === 'NotAllowedError') {
+                msg += '\n\nTroubleshooting: Please check your browser site permissions or Windows Camera Privacy Settings (Start Menu -> search "Camera privacy settings").';
+            } else if (err.name === 'NotFoundError') {
+                msg += '\n\nTroubleshooting: No webcam device was found. Please ensure it is plugged in and recognized by your system.';
+            } else if (err.name === 'NotReadableError') {
+                msg += '\n\nTroubleshooting: The camera is already in use by another application (like Zoom or Teams). Please close it.';
+            }
+            alert(msg);
         }
     }
 
     function stopCamera() {
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-            stream = null;
+        if(localStream) {
+            localStream.getTracks().forEach(track => track.stop());
+            localStream = null;
         }
-        if (scanInterval) {
-            clearInterval(scanInterval);
-            scanInterval = null;
+        if(webcamInterval) {
+            clearInterval(webcamInterval);
+            webcamInterval = null;
         }
+        if (webcamAnimFrameId) {
+            cancelAnimationFrame(webcamAnimFrameId);
+            webcamAnimFrameId = null;
+        }
+        
+        // Hide HUD
+        document.getElementById('hudReactionOverlay').style.display = 'none';
+        
         const video = document.getElementById('webcamVideo');
         video.style.display = 'none';
+        video.srcObject = null;
+        
+        // Clear landmarks canvas
+        const canvas = document.getElementById('webcamLandmarksCanvas');
+        if (canvas) {
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+        
         document.getElementById('camPlaceholder').style.display = 'flex';
         document.getElementById('startCamBtn').style.display = 'block';
         document.getElementById('stopCamBtn').style.display = 'none';
         document.getElementById('scanHint').style.display = 'none';
-        document.getElementById('livePill').classList.remove('active');
-        document.getElementById('livePillText').textContent = 'Idle';
-        document.getElementById('scanOverlay').classList.remove('scanning');
+        document.getElementById('scannerGlow').classList.remove('scanning');
+        document.getElementById('faceGuide').style.opacity = '0';
+        document.getElementById('bpmOverlay').style.display = 'none';
+        
+        if (ecgAnimationId) {
+            cancelAnimationFrame(ecgAnimationId);
+            ecgAnimationId = null;
+        }
+        
+        const livePulse = document.getElementById('livePulse');
+        livePulse.classList.remove('active');
+        document.getElementById('livePillText').textContent = 'Offline';
     }
 
-    async function captureAndAnalyze() {
-        if (isScanning) return;
-        isScanning = true;
-
+    async function captureAndScanCam() {
+        if(isWebcamScanning) return;
+        isWebcamScanning = true;
+        
         const video = document.getElementById('webcamVideo');
         const canvas = document.getElementById('captureCanvas');
-        const camError = document.getElementById('camError');
-
-        document.getElementById('scanOverlay').classList.add('scanning');
-        document.getElementById('livePillText').textContent = 'Scanning...';
-
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        canvas.getContext('2d').drawImage(video, 0, 0);
-        const imageData = canvas.toDataURL('image/jpeg');
-
+        const scannerGlow = document.getElementById('scannerGlow');
+        const guide = document.getElementById('faceGuide');
+        
+        // Gating Check: Log warning if no face tracked, but proceed with API scan as a fallback
+        const hud = document.getElementById('hudReactionOverlay');
+        if (faceLandmarker && hud && hud.style.display === 'none') {
+            console.log("MediaPipe not tracking face. Falling back to backend DeepFace analysis.");
+        }
+        
+        // Trigger scanning flashes
+        scannerGlow.classList.add('scanning');
+        guide.classList.add('scanning-flash');
+        setTimeout(() => guide.classList.remove('scanning-flash'), 600);
+        document.getElementById('livePillText').textContent = 'Analyzing...';
+        
+        // draw video frame to canvas
+        canvas.width = video.videoWidth || 640;
+        canvas.height = video.videoHeight || 480;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imgDataUrl = canvas.toDataURL('image/jpeg');
+        
         try {
-            const response = await fetch('/recommend/webcam', {
+            const res = await fetch('/recommend/webcam', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ image: imageData })
+                body: JSON.stringify({ 
+                    image: imgDataUrl, 
+                    strategy: selectedStrategy,
+                    clientMetrics: currentClientMetrics
+                })
             });
-
-            const data = await response.json();
-
-            if (!data.error) {
-                camError.style.display = 'none';
-                showCamResults(data);
+            const data = await res.json();
+            
+            if(!data.error) {
+                renderResults(data, 'Webcam');
+            } else {
+                console.error("Webcam scan err:", data.error);
             }
-        } catch (err) {
-            camError.textContent = 'Something went wrong. Is Flask running?';
-            camError.style.display = 'block';
+        } catch (e) {
+            console.error("Server API fetch err:", e);
         } finally {
-            isScanning = false;
-            document.getElementById('scanOverlay').classList.remove('scanning');
-            if (stream) document.getElementById('livePillText').textContent = 'Live';
+            isWebcamScanning = false;
+            scannerGlow.classList.remove('scanning');
+            if(localStream) {
+                document.getElementById('livePillText').textContent = 'Live Feed';
+            }
         }
     }
 
+    // Fusion Camera Toggle
+    async function toggleFusionCamera() {
+        const video = document.getElementById('fusionWebcamVideo');
+        const placeholder = document.getElementById('fusionCamPlaceholder');
+        const btn = document.getElementById('fusionCamBtn');
+        const guide = document.getElementById('fusionFaceGuide');
+        const hud = document.getElementById('fusionHudReactionOverlay');
+        
+        if (isFusionCamActive) {
+            // stop it
+            if(fusionStream) {
+                fusionStream.getTracks().forEach(track => track.stop());
+                fusionStream = null;
+            }
+            if (fusionAnimFrameId) {
+                cancelAnimationFrame(fusionAnimFrameId);
+                fusionAnimFrameId = null;
+            }
+            
+            hud.style.display = 'none';
+            video.style.display = 'none';
+            video.srcObject = null;
+            placeholder.style.display = 'flex';
+            guide.style.opacity = '0';
+            
+            const canvas = document.getElementById('fusionLandmarksCanvas');
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+            
+            document.getElementById('fusionBpmOverlay').style.display = 'none';
+            if (ecgAnimationId) {
+                cancelAnimationFrame(ecgAnimationId);
+                ecgAnimationId = null;
+            }
+            
+            btn.textContent = '▶ Activate Camera';
+            isFusionCamActive = false;
+        } else {
+            // start it
+            try {
+                const constraints = { video: true };
+                fusionStream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = fusionStream;
+                video.style.display = 'block';
+                placeholder.style.display = 'none';
+                guide.style.opacity = '0.4';
+                
+                document.getElementById('fusionBpmOverlay').style.display = 'block';
+                initECG('fusionEcgCanvas');
+                
+                btn.textContent = '⏹ Stop Camera';
+                isFusionCamActive = true;
+                
+                // Initialize MediaPipe and start drawing the holographic mesh
+                const landmarker = await initializeFaceLandmarker();
+                if (landmarker) {
+                    lastVideoTime = -1;
+                    fusionAnimFrameId = requestAnimationFrame(() => trackFaceLandmarks('fusion'));
+                }
+            } catch (err) {
+                console.error("Fusion camera error:", err);
+                let msg = 'Could not access camera for snapshot: ' + err.message;
+                if (err.name === 'NotAllowedError') {
+                    msg += '\n\nTroubleshooting: Please check your browser site permissions or Windows Camera Privacy Settings (Start Menu -> search "Camera privacy settings").';
+                } else if (err.name === 'NotFoundError') {
+                    msg += '\n\nTroubleshooting: No webcam device was found.';
+                } else if (err.name === 'NotReadableError') {
+                    msg += '\n\nTroubleshooting: The camera is already in use by another application. Please close it.';
+                }
+                alert(msg);
+            }
+        }
+    }
+
+    function stopFusionCamera() {
+        if(isFusionCamActive) {
+            toggleFusionCamera();
+        }
+    }
+
+    // Submit text logic
     async function getTextRecommendation() {
-        const text = document.getElementById('userText').value.trim();
-        const textError = document.getElementById('textError');
-        const loading = document.getElementById('textLoading');
+        const textVal = document.getElementById('userText').value.trim();
         const btn = document.getElementById('textBtn');
-
-        textError.style.display = 'none';
-
-        if (!text) {
-            textError.style.display = 'block';
+        if(!textVal) {
+            alert('Please tell us how you feel first!');
             return;
         }
-
-        loading.style.display = 'block';
+        
         btn.disabled = true;
-        btn.textContent = 'Detecting...';
-
+        btn.textContent = 'Analyzing...';
+        
         try {
-            const response = await fetch('/recommend/text', {
+            const res = await fetch('/recommend/text', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: text })
+                body: JSON.stringify({ text: textVal, strategy: selectedStrategy })
             });
-
-            const data = await response.json();
-            showTextResults(data);
-
-        } catch (err) {
-            textError.textContent = 'Something went wrong. Is Flask running?';
-            textError.style.display = 'block';
+            const data = await res.json();
+            
+            if(!data.error) {
+                renderResults(data, 'Text');
+            } else {
+                alert('Error analysis: ' + data.error);
+            }
+        } catch (e) {
+            alert('Could not connect to server.');
         } finally {
-            loading.style.display = 'none';
             btn.disabled = false;
-            btn.textContent = 'Find My Music';
+            btn.textContent = '🔍 Analyze Mood & Find Music';
         }
     }
 
-    const moodEmojis = {
-        joy: '😄', happy: '😄',
-        sadness: '😢', sad: '😢',
-        anger: '😠', angry: '😠',
-        fear: '😨',
-        love: '🥰',
-        surprise: '😲',
-        disgust: '😖',
-        neutral: '😐'
-    };
-
-    const moodTints = {
-        joy: 'rgba(250, 204, 21, 0.10)', happy: 'rgba(250, 204, 21, 0.10)',
-        sadness: 'rgba(59, 130, 246, 0.10)', sad: 'rgba(59, 130, 246, 0.10)',
-        anger: 'rgba(239, 68, 68, 0.10)', angry: 'rgba(239, 68, 68, 0.10)',
-        fear: 'rgba(139, 92, 246, 0.10)',
-        love: 'rgba(236, 72, 153, 0.10)',
-        surprise: 'rgba(45, 212, 191, 0.10)',
-        disgust: 'rgba(132, 204, 22, 0.10)',
-        neutral: 'rgba(148, 163, 184, 0.06)'
-    };
-
-    function setMoodBackground(emotion) {
-        const emojiEl = document.getElementById('moodEmojiBg');
-        emojiEl.textContent = moodEmojis[emotion] || '😐';
-        emojiEl.style.opacity = '0.07';
-
-        let tintEl = document.getElementById('moodTintLayer');
-        if (!tintEl) {
-            tintEl = document.createElement('div');
-            tintEl.id = 'moodTintLayer';
-            tintEl.style.position = 'fixed';
-            tintEl.style.top = 0;
-            tintEl.style.left = 0;
-            tintEl.style.right = 0;
-            tintEl.style.bottom = 0;
-            tintEl.style.zIndex = 0;
-            tintEl.style.pointerEvents = 'none';
-            tintEl.style.transition = 'background 1.4s ease';
-            document.body.appendChild(tintEl);
+    // Submit Fusion recommendations
+    async function getFusionRecommendation() {
+        const textVal = document.getElementById('fusionText').value.trim();
+        const btn = document.getElementById('fusionAnalyzeBtn');
+        const scannerGlow = document.getElementById('fusionScannerGlow');
+        const guide = document.getElementById('fusionFaceGuide');
+        
+        if(!textVal) {
+            alert('Please write something in the text box for Fusion Mode!');
+            return;
         }
-        tintEl.style.background = moodTints[emotion] || moodTints.neutral;
+        
+        btn.disabled = true;
+        btn.textContent = 'Fusing Inputs...';
+        
+        let imgDataUrl = '';
+        if (isFusionCamActive && fusionStream) {
+            scannerGlow.classList.add('scanning');
+            guide.classList.add('scanning-flash');
+            setTimeout(() => guide.classList.remove('scanning-flash'), 600);
+            
+            const video = document.getElementById('fusionWebcamVideo');
+            const canvas = document.getElementById('captureCanvas');
+            canvas.width = video.videoWidth || 640;
+            canvas.height = video.videoHeight || 480;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            imgDataUrl = canvas.toDataURL('image/jpeg');
+        }
+        
+        try {
+            const res = await fetch('/recommend/fusion', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    text: textVal, 
+                    image: imgDataUrl, 
+                    strategy: selectedStrategy,
+                    clientMetrics: isFusionCamActive ? currentClientMetrics : {}
+                })
+            });
+            const data = await res.json();
+            
+            if(!data.error) {
+                renderResults(data, 'Fusion ⚡');
+            } else {
+                alert('Fusion analysis failed: ' + data.error);
+            }
+        } catch (e) {
+            alert('Connection error occurred.');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '⚡ Run Multimodal Fusion';
+            scannerGlow.classList.remove('scanning');
+        }
     }
 
-    function renderBreakdownChart(containerId, breakdown) {
-        const el = document.getElementById(containerId);
-        if (!breakdown) { el.innerHTML = ''; return; }
+    // Morphing Vector Face Avatar
+    function animateAvatar(emotion) {
+        const leftEye = document.getElementById('leftEye');
+        const rightEye = document.getElementById('rightEye');
+        const leftBrow = document.getElementById('leftBrow');
+        const rightBrow = document.getElementById('rightBrow');
+        const mouth = document.getElementById('mouth');
+        
+        if (!leftEye || !rightEye || !leftBrow || !rightBrow || !mouth) return;
+        
+        // Reset properties
+        leftEye.setAttribute('rx', '4'); leftEye.setAttribute('ry', '4');
+        rightEye.setAttribute('rx', '4'); rightEye.setAttribute('ry', '4');
+        
+        if (emotion === 'joy' || emotion === 'happy') {
+            // Smile
+            leftBrow.setAttribute('d', 'M 28 31 Q 35 27 42 31');
+            rightBrow.setAttribute('d', 'M 58 31 Q 65 27 72 31');
+            mouth.setAttribute('d', 'M 34 58 Q 50 72 66 58');
+        } else if (emotion === 'sadness' || emotion === 'sad') {
+            // Frown
+            leftEye.setAttribute('rx', '3.5'); leftEye.setAttribute('ry', '3');
+            rightEye.setAttribute('rx', '3.5'); rightEye.setAttribute('ry', '3');
+            leftBrow.setAttribute('d', 'M 28 32 Q 35 36 42 38');
+            rightBrow.setAttribute('d', 'M 58 38 Q 65 36 72 32');
+            mouth.setAttribute('d', 'M 34 68 Q 50 54 66 68');
+        } else if (emotion === 'anger' || emotion === 'angry') {
+            // Mad / Aggressive
+            leftEye.setAttribute('rx', '3'); leftEye.setAttribute('ry', '3');
+            rightEye.setAttribute('rx', '3'); rightEye.setAttribute('ry', '3');
+            leftBrow.setAttribute('d', 'M 28 30 Q 35 36 42 36');
+            rightBrow.setAttribute('d', 'M 58 36 Q 65 36 72 30');
+            mouth.setAttribute('d', 'M 36 64 Q 50 60 64 64');
+        } else if (emotion === 'fear') {
+            // Scared
+            leftEye.setAttribute('rx', '5.5'); leftEye.setAttribute('ry', '5.5');
+            rightEye.setAttribute('rx', '5.5'); rightEye.setAttribute('ry', '5.5');
+            leftBrow.setAttribute('d', 'M 28 29 Q 35 29 42 29');
+            rightBrow.setAttribute('d', 'M 58 29 Q 65 29 72 29');
+            mouth.setAttribute('d', 'M 42 62 Q 50 70 58 62');
+        } else if (emotion === 'surprise') {
+            // Gasped / Surprised
+            leftEye.setAttribute('rx', '6'); leftEye.setAttribute('ry', '6');
+            rightEye.setAttribute('rx', '6'); rightEye.setAttribute('ry', '6');
+            leftBrow.setAttribute('d', 'M 28 27 Q 35 24 42 27');
+            rightBrow.setAttribute('d', 'M 58 27 Q 65 24 72 27');
+            mouth.setAttribute('d', 'M 42 64 Q 50 52 58 64 Q 50 76 42 64');
+        } else if (emotion === 'disgust') {
+            // Disgusted squirm
+            leftEye.setAttribute('rx', '3.5'); leftEye.setAttribute('ry', '2');
+            rightEye.setAttribute('rx', '3.5'); rightEye.setAttribute('ry', '2');
+            leftBrow.setAttribute('d', 'M 28 34 Q 35 34 42 36');
+            rightBrow.setAttribute('d', 'M 58 36 Q 65 34 72 34');
+            mouth.setAttribute('d', 'M 35 66 Q 42 58 50 66 Q 58 58 65 66');
+        } else { // neutral
+            // Calm & Neutral
+            leftBrow.setAttribute('d', 'M 28 33 Q 35 32 42 33');
+            rightBrow.setAttribute('d', 'M 58 33 Q 65 32 72 33');
+            mouth.setAttribute('d', 'M 35 62 Q 50 62 65 62');
+        }
+    }
 
-        const entries = Object.entries(breakdown).sort((a, b) => b[1] - a[1]);
-        const maxVal = Math.max(...entries.map(e => e[1]), 1);
+    // Render results in right pane
+    function renderResults(data, source) {
+        document.getElementById('resultsEmptyState').style.display = 'none';
+        document.getElementById('resultsContent').style.display = 'block';
+        
+        // Show fine tuner slider
+        document.getElementById('fineTunerContainer').style.display = 'block';
+        
+        // Map detected emotion to slider value
+        const slider = document.getElementById('manualVibeSlider');
+        if (data.emotion === 'joy' || data.emotion === 'happy') {
+            slider.value = 2;
+        } else if (data.emotion === 'angry' || data.emotion === 'anger') {
+            slider.value = 3;
+        } else {
+            slider.value = 1;
+        }
+        
+        // Bind primary values
+        document.getElementById('resSourceType').textContent = `Detected via ${source}`;
+        
+        const displayEmotion = data.emotion === 'neutral' ? 'Calm & Focused' : data.emotion;
+        document.getElementById('resEmotionName').textContent = displayEmotion;
+        document.getElementById('resConfidenceText').textContent = `Confidence Score: ${data.confidence}%`;
+        document.getElementById('resQuote').textContent = `"${data.quote}"`;
+        
+        // Adjust simulated Heart-Rate BPM based on detected emotion
+        if (data.emotion === 'anger' || data.emotion === 'angry' || data.emotion === 'fear') {
+            ecgBpm = 96;
+        } else if (data.emotion === 'joy' || data.emotion === 'happy') {
+            ecgBpm = 78;
+        } else if (data.emotion === 'sadness' || data.emotion === 'sad') {
+            ecgBpm = 64;
+        } else {
+            ecgBpm = 72;
+        }
+        document.getElementById('bpmValue').textContent = ecgBpm;
+        if(document.getElementById('fusionBpmValue')) {
+            document.getElementById('fusionBpmValue').textContent = ecgBpm;
+        }
 
-        let html = '<p class="chart-title">Emotion breakdown</p><div class="chart-bars">';
-        entries.forEach(([label, value]) => {
-            const pct = Math.max((value / maxVal) * 100, 2);
+        // Render breakdown bars
+        const breakdownWrap = document.getElementById('resBreakdownContainer');
+        breakdownWrap.innerHTML = '';
+        
+        if(data.breakdown) {
+            const sortedBreakdown = Object.entries(data.breakdown).sort((a,b) => b[1] - a[1]);
+            const maxVal = Math.max(...sortedBreakdown.map(x => x[1]), 1);
+            
+            sortedBreakdown.forEach(([mood, percent]) => {
+                const filledPct = Math.max((percent / maxVal) * 100, 2);
+                const displayMoodName = mood === 'neutral' ? 'Calm & Focused' : mood;
+                breakdownWrap.innerHTML += `
+                    <div class="mood-bar-row">
+                        <span class="mood-bar-name" style="width: 100px;">${displayMoodName}</span>
+                        <div class="mood-bar-track">
+                            <div class="mood-bar-fill" style="width: ${filledPct}%"></div>
+                        </div>
+                        <span class="mood-bar-val">${percent}%</span>
+                    </div>
+                `;
+            });
+        }
+        
+        // Title based on strategy
+        const listLabel = document.getElementById('playlistTitleLabel');
+        if (selectedStrategy === 'shift' && (data.emotion === 'sadness' || data.emotion === 'sad' || data.emotion === 'anger' || data.emotion === 'angry' || data.emotion === 'fear')) {
+            listLabel.textContent = `Therapeutic Playlist (Shifting Mood)`;
+        } else {
+            listLabel.textContent = `Recommended Study Tracks`;
+        }
+
+        // Render song cards
+        renderSongCardsList(data.recommendations);
+        
+        // Update styling and vector avatar
+        setEmotionTheme(data.emotion);
+        animateAvatar(data.emotion);
+        
+        // Show Explainable AI (LIME) attributions if text was processed
+        const xaiPanel = document.getElementById('xaiPanel');
+        if (data.lime_attributions && data.lime_attributions.length > 0) {
+            xaiPanel.style.display = 'block';
+            renderLIME(data.lime_attributions);
+        } else {
+            xaiPanel.style.display = 'none';
+        }
+
+        // Save to History telemetry
+        addTelemetryLog(source, data.emotion, data.confidence);
+    }
+
+    // Draw playlist cards list
+    function renderSongCardsList(recommendations) {
+        const songsWrap = document.getElementById('resSongsList');
+        songsWrap.innerHTML = '';
+        
+        if(recommendations && recommendations.length > 0) {
+            recommendations.forEach(song => {
+                const escapedTitle = song.song.replace(/'/g, "\\'");
+                const escapedArtist = song.artist.replace(/'/g, "\\'");
+                songsWrap.innerHTML += `
+                    <div class="song-card">
+                        <div class="song-card-art">🎵</div>
+                        <div class="song-card-details">
+                            <div class="song-card-title">${song.song}</div>
+                            <div class="song-card-artist">${song.artist}</div>
+                        </div>
+                        <div class="song-card-actions">
+                            <button class="song-play-btn" title="Play inside App" onclick="playMusic('${song.youtube_link}', '${escapedTitle}', '${escapedArtist}')">▶</button>
+                            <a href="${song.youtube_link}" target="_blank" class="song-yt-btn" title="Open YouTube Link">YouTube</a>
+                        </div>
+                    </div>
+                `;
+            });
+        } else {
+            songsWrap.innerHTML = '<p style="font-size:0.85rem; color:var(--text-muted);">No matching recommendations in playlist database.</p>';
+        }
+    }
+
+    // Manual slider override logic
+    async function applyManualVibeTune() {
+        const val = parseInt(document.getElementById('manualVibeSlider').value);
+        let targetEmotion = 'neutral';
+        let displayLabel = 'Calm & Focused';
+        
+        if (val === 2) {
+            targetEmotion = 'joy';
+            displayLabel = 'Happy / Uplifting';
+        } else if (val === 3) {
+            targetEmotion = 'angry';
+            displayLabel = 'High Energy / Focus';
+        }
+        
+        try {
+            const res = await fetch(`/recommend/direct/${targetEmotion}?strategy=${selectedStrategy}`);
+            const data = await res.json();
+            
+            if (!data.error) {
+                // Update display title and list
+                document.getElementById('resEmotionName').textContent = displayLabel;
+                document.getElementById('resConfidenceText').textContent = `Confidence Score: 100% (Manual Tuning)`;
+                document.getElementById('resQuote').textContent = `"${data.quote}"`;
+                
+                const listLabel = document.getElementById('playlistTitleLabel');
+                if (selectedStrategy === 'shift' && (targetEmotion === 'sadness' || targetEmotion === 'sad' || targetEmotion === 'anger' || targetEmotion === 'angry')) {
+                    listLabel.textContent = `Therapeutic Playlist (Shifting Mood)`;
+                } else {
+                    listLabel.textContent = `Recommended Study Tracks`;
+                }
+
+                renderSongCardsList(data.recommendations);
+                setEmotionTheme(targetEmotion);
+                animateAvatar(targetEmotion);
+            }
+        } catch (e) {
+            console.error("Direct fetch error:", e);
+        }
+    }
+
+    // Play Music (Bottom Persistent Player & Drawer)
+    let isPlayerDrawerExpanded = false;
+    let isMusicPlaying = false;
+    
+    function playMusic(youtubeUrl, title, artist) {
+        // extract video id from youtube link
+        let videoId = '';
+        if(youtubeUrl.includes('v=')) {
+            videoId = youtubeUrl.split('v=')[1].split('&')[0];
+        } else if(youtubeUrl.includes('youtu.be/')) {
+            videoId = youtubeUrl.split('youtu.be/')[1].split('?')[0];
+        } else {
+            // fallback/parsing failed
+            alert('Cannot load YouTube streaming reference directly.');
+            return;
+        }
+        
+        // Load iframe src
+        const iframe = document.getElementById('youtubeIframe');
+        iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&enablejsapi=1`;
+        
+        // Update Bottom Bar
+        document.getElementById('playerBarTitle').textContent = title;
+        document.getElementById('playerBarArtist').textContent = artist;
+        document.getElementById('playerEq').style.display = 'flex';
+        document.getElementById('bottomPlayerBar').classList.add('active');
+        
+        // Update Drawer
+        document.getElementById('drawerTrackName').textContent = `Now Playing: ${title} - ${artist}`;
+        
+        // Add dynamic visual glow matching active theme
+        document.getElementById('playerTrackArt').style.background = 'var(--primary)';
+
+        // Update direct YouTube link fallback button
+        const ytLink = document.getElementById('playerBarYtLink');
+        if (ytLink) {
+            ytLink.href = youtubeUrl;
+            ytLink.style.display = 'flex';
+        }
+
+        const drawerYtLink = document.getElementById('playerDrawerYtLink');
+        if (drawerYtLink) {
+            drawerYtLink.href = youtubeUrl;
+        }
+        
+        // Show control buttons and set icon to Pause (since it starts playing)
+        const barBtn = document.getElementById('barPlayPauseBtn');
+        const drawerBtn = document.getElementById('drawerPlayPauseBtn');
+        if (barBtn) {
+            barBtn.style.display = 'flex';
+            barBtn.textContent = '⏸';
+        }
+        if (drawerBtn) {
+            drawerBtn.style.display = 'flex';
+            drawerBtn.textContent = '⏸';
+        }
+        isMusicPlaying = true;
+        
+        // Expand player drawer automatically on play to ensure video loading and visibility
+        const drawer = document.getElementById('playerDrawer');
+        const btnText = document.getElementById('playerVideoBtnText');
+        if (drawer && btnText) {
+            drawer.classList.add('expanded');
+            btnText.textContent = 'Collapse Player';
+            isPlayerDrawerExpanded = true;
+        }
+    }
+
+    function togglePlayPause() {
+        const iframe = document.getElementById('youtubeIframe');
+        const barBtn = document.getElementById('barPlayPauseBtn');
+        const drawerBtn = document.getElementById('drawerPlayPauseBtn');
+        const eq = document.getElementById('playerEq');
+        
+        if (!iframe || !iframe.src) return;
+        
+        if (isMusicPlaying) {
+            // Pause the video
+            iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+            isMusicPlaying = false;
+            if (barBtn) barBtn.textContent = '▶';
+            if (drawerBtn) drawerBtn.textContent = '▶';
+            if (eq) eq.style.display = 'none';
+        } else {
+            // Resume the video
+            iframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+            isMusicPlaying = true;
+            if (barBtn) barBtn.textContent = '⏸';
+            if (drawerBtn) drawerBtn.textContent = '⏸';
+            if (eq) eq.style.display = 'flex';
+        }
+    }
+
+    function togglePlayerDrawer() {
+        const drawer = document.getElementById('playerDrawer');
+        const btnText = document.getElementById('playerVideoBtnText');
+        
+        if (isPlayerDrawerExpanded) {
+            drawer.classList.remove('expanded');
+            btnText.textContent = 'Expand Player';
+            isPlayerDrawerExpanded = false;
+        } else {
+            drawer.classList.add('expanded');
+            btnText.textContent = 'Collapse Player';
+            isPlayerDrawerExpanded = true;
+        }
+    }
+
+    // History & Stability Metrics
+    function addTelemetryLog(source, emotion, confidence) {
+        const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        
+        let swingLabel = 'First Entry';
+        let swingClass = 'swing-first';
+        
+        if (moodHistory.length > 0) {
+            const previous = moodHistory[moodHistory.length - 1];
+            
+            const displayPrevEmotion = previous.emotion === 'neutral' ? 'Calm & Focused' : previous.emotion;
+            const displayCurrEmotion = emotion === 'neutral' ? 'Calm & Focused' : emotion;
+            
+            if (previous.emotion === emotion) {
+                swingLabel = 'Steady state';
+                swingClass = 'swing-stable';
+            } else {
+                swingLabel = `${displayPrevEmotion} → ${displayCurrEmotion}`;
+                swingClass = 'swing-changed';
+            }
+        }
+        
+        moodHistory.push({
+            time: timeStr,
+            source: source,
+            emotion: emotion,
+            confidence: confidence,
+            swingLabel: swingLabel,
+            swingClass: swingClass
+        });
+        
+        updateHistoryTimeline();
+        recalculateSessionStats();
+    }
+
+    function updateHistoryTimeline() {
+        const wrap = document.getElementById('historyTimeline');
+        
+        if(moodHistory.length === 0) {
+            wrap.innerHTML = `
+                <div class="timeline-empty" id="historyEmpty">
+                    No telemetry data. Run text or webcam scans to record mood shifts over time.
+                </div>
+            `;
+            return;
+        }
+        
+        let html = '';
+        // render reverse-chronological
+        moodHistory.slice().reverse().forEach(entry => {
+            const emojiStr = moodEmojis[entry.emotion] ? moodEmojis[entry.emotion][0] : '😐';
+            const displayEmotion = entry.emotion === 'neutral' ? 'Calm & Focused' : entry.emotion;
             html += `
-                <div class="chart-row">
-                    <span class="chart-label">${label}</span>
-                    <div class="chart-track">
-                        <div class="chart-fill" style="width:${pct}%"></div>
+                <div class="timeline-item">
+                    <div class="timeline-dot" style="background: var(--primary);"></div>
+                    <div class="timeline-card">
+                        <div class="timeline-meta">
+                            <span class="timeline-time">${entry.time}</span>
+                            <span class="timeline-source-pill">${entry.source}</span>
+                            <div class="timeline-mood-wrap">
+                                <span class="timeline-emoji">${emojiStr}</span>
+                                <span class="timeline-mood-pill" style="border-color: var(--primary); background: var(--primary-glow);">${displayEmotion}</span>
+                            </div>
+                            <span class="timeline-confidence">${entry.confidence}%</span>
+                        </div>
+                        <div class="timeline-swing-label ${entry.swingClass}">${entry.swingLabel}</div>
                     </div>
-                    <span class="chart-value">${value}%</span>
-                </div>`;
+                </div>
+            `;
         });
-        html += '</div>';
-        el.innerHTML = html;
+        
+        wrap.innerHTML = html;
     }
 
-    function renderSongs(containerId, songs) {
-        const list = document.getElementById(containerId);
-        list.innerHTML = '';
-        songs.forEach(song => {
-            list.innerHTML += `
-                <div class="song-card">
-                    <div>
-                        <div class="song-name">${song.song}</div>
-                        <div class="artist-name">${song.artist}</div>
-                    </div>
-                    <a href="${song.youtube_link}" target="_blank" class="listen-btn">▶ Listen</a>
-                </div>`;
+    function recalculateSessionStats() {
+        if(moodHistory.length === 0) {
+            document.getElementById('statsStability').textContent = '100%';
+            document.getElementById('statsDominant').textContent = 'Calm & Focused';
+            document.getElementById('statsCount').textContent = '0';
+            return;
+        }
+        
+        // Count entries
+        const totalLogs = moodHistory.length;
+        document.getElementById('statsCount').textContent = totalLogs;
+        
+        // Dominant mood
+        const moodCounts = {};
+        let dominantMood = 'neutral';
+        let maxCount = 0;
+        
+        moodHistory.forEach(item => {
+            moodCounts[item.emotion] = (moodCounts[item.emotion] || 0) + 1;
+            if(moodCounts[item.emotion] > maxCount) {
+                maxCount = moodCounts[item.emotion];
+                dominantMood = item.emotion;
+            }
+        });
+        
+        const displayDominant = dominantMood === 'neutral' ? 'Calm & Focused' : dominantMood;
+        document.getElementById('statsDominant').textContent = displayDominant;
+        
+        // Focus Stability Score (calculated based on number of mood changes vs total observations)
+        let shiftsCount = 0;
+        for (let i = 1; i < moodHistory.length; i++) {
+            if (moodHistory[i].emotion !== moodHistory[i-1].emotion) {
+                shiftsCount++;
+            }
+        }
+        
+        // 1 shift in a short history is normal, penalize higher transition frequencies
+        const stabilityFactor = totalLogs > 1 ? Math.max(0, Math.round(100 - (shiftsCount / (totalLogs - 1)) * 100)) : 100;
+        document.getElementById('statsStability').textContent = `${stabilityFactor}%`;
+    }
+
+    function clearHistory() {
+        moodHistory = [];
+        updateHistoryTimeline();
+        recalculateSessionStats();
+    }
+
+    // Pomodoro Timer Logic
+    let timerInterval = null;
+    let timerSeconds = 25 * 60;
+    let isTimerRunning = false;
+    let timerMode = 'focus'; // 'focus' or 'break'
+
+    function updateTimerDisplay() {
+        const min = Math.floor(timerSeconds / 60);
+        const sec = timerSeconds % 60;
+        document.getElementById('timerDisplay').textContent = `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+        
+        // update circle stroke SVG progress (radius = 62, circum = 2 * PI * 62 = 389.56)
+        const totalTime = timerMode === 'focus' ? 25 * 60 : 5 * 60;
+        const fraction = timerSeconds / totalTime;
+        const offset = 389.56 * (1 - fraction);
+        document.getElementById('timerProgressCircle').style.strokeDashoffset = offset;
+    }
+
+    function toggleTimer() {
+        const btn = document.getElementById('timerControlBtn');
+        const container = document.getElementById('timerCircleContainer');
+        
+        if (isTimerRunning) {
+            clearInterval(timerInterval);
+            isTimerRunning = false;
+            btn.textContent = '▶ Resume';
+            container.classList.remove('breathing-pulse');
+        } else {
+            initializeAudioContext();
+            isTimerRunning = true;
+            btn.textContent = '⏸ Pause';
+            container.classList.add('breathing-pulse');
+            
+            timerInterval = setInterval(() => {
+                if (timerSeconds > 0) {
+                    timerSeconds--;
+                    updateTimerDisplay();
+                } else {
+                    playAlertSound();
+                    clearInterval(timerInterval);
+                    isTimerRunning = false;
+                    container.classList.remove('breathing-pulse');
+                    
+                    if (timerMode === 'focus') {
+                        timerMode = 'break';
+                        timerSeconds = 5 * 60;
+                        document.getElementById('timerModeLabel').textContent = 'Break Period';
+                        document.getElementById('timerModeLabel').style.color = '#10b981';
+                        alert('Pomodoro Focus Session Finished! Take a break.');
+                    } else {
+                        timerMode = 'focus';
+                        timerSeconds = 25 * 60;
+                        document.getElementById('timerModeLabel').textContent = 'Focus Session';
+                        document.getElementById('timerModeLabel').style.color = 'var(--primary)';
+                        alert('Break is over! Time to focus.');
+                    }
+                    
+                    btn.textContent = '▶ Start';
+                    updateTimerDisplay();
+                }
+            }, 1000);
+        }
+    }
+
+    function resetTimer() {
+        clearInterval(timerInterval);
+        isTimerRunning = false;
+        timerMode = 'focus';
+        timerSeconds = 25 * 60;
+        document.getElementById('timerCircleContainer').classList.remove('breathing-pulse');
+        document.getElementById('timerModeLabel').textContent = 'Focus Session';
+        document.getElementById('timerModeLabel').style.color = 'var(--primary)';
+        document.getElementById('timerControlBtn').textContent = '▶ Start';
+        updateTimerDisplay();
+    }
+
+    // Guided Box-Breathing Companion
+    let breathingInterval = null;
+    let breathingState = 0; // 0: inhale, 1: hold, 2: exhale, 3: hold
+    let isBreathingActive = false;
+
+    function toggleBreathingGuide() {
+        const btn = document.getElementById('breathingControlBtn');
+        const orb = document.getElementById('breathingOrb');
+        const text = document.getElementById('breathingInstruction');
+        const label = document.getElementById('breathingStateLabel');
+        
+        if (isBreathingActive) {
+            clearInterval(breathingInterval);
+            isBreathingActive = false;
+            btn.textContent = '▶ Begin Guide';
+            text.textContent = 'Start';
+            label.textContent = 'Idle';
+            orb.style.width = '70px';
+            orb.style.height = '70px';
+            orb.style.transition = 'all 0.5s ease';
+        } else {
+            initializeAudioContext();
+            isBreathingActive = true;
+            btn.textContent = '⏹ Stop Guide';
+            
+            breathingState = 0;
+            runBreathingCycle();
+            breathingInterval = setInterval(runBreathingCycle, 4000);
+        }
+    }
+
+    function runBreathingCycle() {
+        const orb = document.getElementById('breathingOrb');
+        const text = document.getElementById('breathingInstruction');
+        const label = document.getElementById('breathingStateLabel');
+        
+        orb.style.transition = 'all 4s linear';
+        
+        if (breathingState === 0) {
+            label.textContent = 'Inhale';
+            text.textContent = 'Breathe In';
+            orb.style.width = '115px';
+            orb.style.height = '115px';
+            breathingState = 1;
+        } else if (breathingState === 1) {
+            label.textContent = 'Hold';
+            text.textContent = 'Hold';
+            orb.style.width = '115px';
+            orb.style.height = '115px';
+            breathingState = 2;
+        } else if (breathingState === 2) {
+            label.textContent = 'Exhale';
+            text.textContent = 'Breathe Out';
+            orb.style.width = '70px';
+            orb.style.height = '70px';
+            breathingState = 3;
+        } else if (breathingState === 3) {
+            label.textContent = 'Hold';
+            text.textContent = 'Hold';
+            orb.style.width = '70px';
+            orb.style.height = '70px';
+            breathingState = 0;
+        }
+    }
+
+    // Focus Diagnostics Generator
+    function generateFocusDiagnostics() {
+        const modal = document.getElementById('diagnosticsModal');
+        
+        if (moodHistory.length === 0) {
+            alert("No session history telemetry. Scan text or webcam first.");
+            return;
+        }
+        
+        const total = moodHistory.length;
+        let calmCount = 0;
+        let stressCount = 0;
+        let swingsCount = 0;
+        
+        for (let i = 0; i < total; i++) {
+            const emotion = moodHistory[i].emotion;
+            if (emotion === 'neutral') calmCount++;
+            if (emotion === 'sadness' || emotion === 'sad' || emotion === 'fear' || emotion === 'anger' || emotion === 'angry') {
+                stressCount++;
+            }
+            if (i > 0 && moodHistory[i].emotion !== moodHistory[i-1].emotion) {
+                swingsCount++;
+            }
+        }
+        
+        const calmPct = Math.round((calmCount / total) * 100);
+        const stressPct = Math.round((stressCount / total) * 100);
+        const stability = total > 1 ? Math.max(0, Math.round(100 - (swingsCount / (total - 1)) * 100)) : 100;
+        
+        let grade = 'B';
+        let advice = '';
+        
+        if (stability >= 80 && calmPct >= 50) {
+            grade = 'A+';
+            advice = "Superb study alignment! Your cognitive profiles show highly stable focus. Recommended ratio: 50-minute study / 10-minute rest.";
+        } else if (stability >= 70 && calmPct >= 30) {
+            grade = 'A';
+            advice = "Excellent baseline focus. Keep leveraging standard 25-minute Pomodoro cycles to maintain your current productivity.";
+        } else if (stressPct > 40) {
+            grade = 'C';
+            advice = "Elevated stress load detected. Use 'Shift Mood' vibe strategy and take 5 minutes to follow the guided Box-Breathing resets.";
+        } else if (swingsCount > 2) {
+            grade = 'B-';
+            advice = "Volatile emotional variance. Settle your context: use 'Ambient Soundscapes' (Brown Noise) to mask audible distractions.";
+        } else {
+            grade = 'B';
+            advice = "Healthy study progression. Continue log telemetry tracking to analyze mental fatigue trends.";
+        }
+        
+        document.getElementById('diagnosticsGrade').textContent = grade;
+        document.getElementById('diagnosticsStabilityVal').textContent = `${stability}%`;
+        document.getElementById('diagAnxietyScore').textContent = `Stress Index: ${stressPct}%`;
+        document.getElementById('diagCalmScore').textContent = `Flow/Calm Index: ${calmPct}%`;
+        document.getElementById('diagSwingsScore').textContent = swingsCount;
+        document.getElementById('diagnosticsAdvice').textContent = `"${advice}"`;
+        
+        modal.style.bottom = '76px';
+    }
+
+    function closeDiagnostics() {
+        document.getElementById('diagnosticsModal').style.bottom = '-460px';
+    }
+
+    // Web Audio Synthesized Soundscapes
+    let audioCtx = null;
+    let brownNoiseSource = null;
+    let brownNoiseGain = null;
+    let rainNoiseSource = null;
+    let rainNoiseGain = null;
+    let isBrownPlaying = false;
+    let isRainPlaying = false;
+
+    function initializeAudioContext() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+    }
+
+    function playAlertSound() {
+        initializeAudioContext();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
+        osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.12); // A5
+        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.35);
+    }
+
+    function createBrownNoiseNode(context) {
+        const bufferSize = 2 * context.sampleRate;
+        const noiseBuffer = context.createBuffer(1, bufferSize, context.sampleRate);
+        const output = noiseBuffer.getChannelData(0);
+        let lastOut = 0.0;
+        for (let i = 0; i < bufferSize; i++) {
+            const white = Math.random() * 2 - 1;
+            output[i] = (lastOut + (0.02 * white)) / 1.02;
+            lastOut = output[i];
+            output[i] *= 3.5;
+        }
+        const source = context.createBufferSource();
+        source.buffer = noiseBuffer;
+        source.loop = true;
+        return source;
+    }
+
+    function createRainNoiseNode(context) {
+        const bufferSize = 2 * context.sampleRate;
+        const noiseBuffer = context.createBuffer(1, bufferSize, context.sampleRate);
+        const output = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            output[i] = Math.random() * 2 - 1;
+        }
+        const source = context.createBufferSource();
+        source.buffer = noiseBuffer;
+        source.loop = true;
+        
+        const bandpass = context.createBiquadFilter();
+        bandpass.type = 'bandpass';
+        bandpass.frequency.value = 750;
+        bandpass.Q.value = 0.45;
+        
+        const lowpass = context.createBiquadFilter();
+        lowpass.type = 'lowpass';
+        lowpass.frequency.value = 1600;
+        
+        source.connect(bandpass);
+        bandpass.connect(lowpass);
+        
+        return { source, outputNode: lowpass };
+    }
+
+    function toggleAmbient(type) {
+        initializeAudioContext();
+        
+        if (type === 'brown') {
+            const btn = document.getElementById('brownNoisePlayBtn');
+            const slider = document.getElementById('brownNoiseVolume');
+            if (isBrownPlaying) {
+                if (brownNoiseSource) {
+                    brownNoiseSource.stop();
+                    brownNoiseSource = null;
+                }
+                btn.textContent = '▶';
+                isBrownPlaying = false;
+            } else {
+                brownNoiseSource = createBrownNoiseNode(audioCtx);
+                brownNoiseGain = audioCtx.createGain();
+                brownNoiseGain.gain.value = parseFloat(slider.value) || 0.25;
+                if(brownNoiseGain.gain.value === 0) {
+                    slider.value = 0.25;
+                    brownNoiseGain.gain.value = 0.25;
+                }
+                
+                brownNoiseSource.connect(brownNoiseGain);
+                brownNoiseGain.connect(audioCtx.destination);
+                brownNoiseSource.start();
+                btn.textContent = '⏹';
+                isBrownPlaying = true;
+            }
+        } else if (type === 'rain') {
+            const btn = document.getElementById('rainNoisePlayBtn');
+            const slider = document.getElementById('rainNoiseVolume');
+            if (isRainPlaying) {
+                if (rainNoiseSource) {
+                    rainNoiseSource.stop();
+                    rainNoiseSource = null;
+                }
+                btn.textContent = '▶';
+                isRainPlaying = false;
+            } else {
+                const { source, outputNode } = createRainNoiseNode(audioCtx);
+                rainNoiseSource = source;
+                rainNoiseGain = audioCtx.createGain();
+                rainNoiseGain.gain.value = parseFloat(slider.value) || 0.25;
+                if(rainNoiseGain.gain.value === 0) {
+                    slider.value = 0.25;
+                    rainNoiseGain.gain.value = 0.25;
+                }
+                
+                outputNode.connect(rainNoiseGain);
+                rainNoiseGain.connect(audioCtx.destination);
+                rainNoiseSource.start();
+                btn.textContent = '⏹';
+                isRainPlaying = true;
+            }
+        }
+    }
+
+    function adjustAmbientVolume(type) {
+        initializeAudioContext();
+        
+        if (type === 'brown') {
+            const val = parseFloat(document.getElementById('brownNoiseVolume').value);
+            if (brownNoiseGain) {
+                brownNoiseGain.gain.setValueAtTime(val, audioCtx.currentTime);
+            }
+            if (val > 0 && !isBrownPlaying) {
+                toggleAmbient('brown');
+            }
+        } else if (type === 'rain') {
+            const val = parseFloat(document.getElementById('rainNoiseVolume').value);
+            if (rainNoiseGain) {
+                rainNoiseGain.gain.setValueAtTime(val, audioCtx.currentTime);
+            }
+            if (val > 0 && !isRainPlaying) {
+                toggleAmbient('rain');
+            }
+        }
+    }
+
+    // Holographic ECG Pulse-Wave Animation Canvas
+    let ecgCanvas = null;
+    let ecgCtx = null;
+    let ecgPoints = [];
+    let ecgBpm = 72;
+    let ecgAnimationId = null;
+
+    function initECG(canvasId) {
+        ecgCanvas = document.getElementById(canvasId);
+        if(!ecgCanvas) return;
+        ecgCtx = ecgCanvas.getContext('2d');
+        ecgCanvas.width = 300;
+        ecgCanvas.height = 42;
+        
+        ecgPoints = new Array(300).fill(20);
+        
+        if (ecgAnimationId) cancelAnimationFrame(ecgAnimationId);
+        animateECG();
+    }
+
+    let ecgTime = 0;
+    function animateECG() {
+        if(!ecgCanvas || !ecgCtx) return;
+        ecgCtx.clearRect(0, 0, ecgCanvas.width, ecgCanvas.height);
+        
+        const speed = ecgBpm / 60;
+        ecgTime += speed * 0.15;
+        
+        ecgPoints.shift();
+        
+        let nextY = 20;
+        const cycle = ecgTime % (2 * Math.PI);
+        
+        if (cycle < 0.2) {
+            nextY = 20 - Math.sin(cycle * (Math.PI / 0.2)) * 3.5;
+        } else if (cycle >= 0.25 && cycle < 0.33) {
+            nextY = 20 + ((cycle - 0.25) / 0.08) * 4.5;
+        } else if (cycle >= 0.33 && cycle < 0.43) {
+            const peakFrac = (cycle - 0.33) / 0.1;
+            nextY = 24.5 - peakFrac * 22;
+        } else if (cycle >= 0.43 && cycle < 0.53) {
+            const dipFrac = (cycle - 0.43) / 0.1;
+            nextY = 2.5 + dipFrac * 26.5;
+        } else if (cycle >= 0.53 && cycle < 0.62) {
+            const recFrac = (cycle - 0.53) / 0.09;
+            nextY = 29 - recFrac * 9;
+        } else if (cycle >= 0.72 && cycle < 0.92) {
+            nextY = 20 - Math.sin((cycle - 0.72) * (Math.PI / 0.2)) * 5.5;
+        }
+        
+        nextY += (Math.random() * 1.6 - 0.8);
+        ecgPoints.push(nextY);
+        
+        ecgCtx.beginPath();
+        ecgCtx.lineWidth = 1.6;
+        ecgCtx.strokeStyle = 'hsl(' + getComputedStyle(document.documentElement).getPropertyValue('--theme-hue') + ', 85%, 65%)';
+        ecgCtx.shadowColor = 'hsla(' + getComputedStyle(document.documentElement).getPropertyValue('--theme-hue') + ', 85%, 65%, 0.6)';
+        ecgCtx.shadowBlur = 6;
+        
+        for (let i = 0; i < ecgPoints.length; i++) {
+            if (i === 0) ecgCtx.moveTo(i, ecgPoints[i]);
+            else ecgCtx.lineTo(i, ecgPoints[i]);
+        }
+        ecgCtx.stroke();
+        
+        ecgAnimationId = requestAnimationFrame(animateECG);
+    }
+
+    // Set initial fallback theme & reset clock visual state
+    setEmotionTheme('neutral');
+    updateTimerDisplay();
+
+    // ==========================================
+    // NEW PREMIUM FUNCTIONALITIES FOR 100% CHECKLIST
+    // ==========================================
+
+    // 1. Explainable AI: LIME Attribution Renderer
+    function renderLIME(attributions) {
+        const wrap = document.getElementById('xaiAttributedText');
+        wrap.innerHTML = '';
+        
+        attributions.forEach(item => {
+            const score = item.score;
+            let bgColor = 'rgba(255,255,255,0.05)';
+            let titleText = `Neutral impact (0.0)`;
+            
+            if (score > 0.5) {
+                // Positive attribution: contributes to prediction
+                const alpha = Math.min(score / 15, 0.6);
+                bgColor = `rgba(16, 185, 129, ${alpha})`;
+                titleText = `Contributes +${score}% to predicted emotion`;
+            } else if (score < -0.5) {
+                // Negative attribution: detracts from prediction
+                const alpha = Math.min(Math.abs(score) / 15, 0.6);
+                bgColor = `rgba(239, 68, 68, ${alpha})`;
+                titleText = `Detracts ${score}% from predicted emotion`;
+            }
+            
+            wrap.innerHTML += `
+                <span style="background: ${bgColor}; padding: 3px 8px; border-radius: 6px; cursor: help; border: 1px solid rgba(255,255,255,0.06); transition: all 0.2s;" title="${titleText}">
+                    ${item.word}
+                </span>
+            `;
         });
     }
 
-    function showTextResults(data) {
-        document.getElementById('textEmotionName').textContent = data.emotion;
-        document.getElementById('textConfidenceText').textContent = 'Confidence: ' + data.confidence + '%';
-        document.getElementById('textQuote').textContent = data.quote || '';
-        renderBreakdownChart('textBreakdown', data.breakdown);
-        renderSongs('textSongsList', data.recommendations);
-        document.getElementById('textResultBlock').classList.add('show');
-        document.getElementById('textResultBlock').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        setMoodBackground(data.emotion);
+    // 2. Export Session History as CSV
+    async function exportHistoryCSV() {
+        if (moodHistory.length === 0) {
+            alert("No session history to export. Run some tests first!");
+            return;
+        }
+        
+        try {
+            const res = await fetch('/telemetry/export', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ history: moodHistory })
+            });
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'harmony_mind_history.csv';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        } catch (e) {
+            alert("Failed to export CSV: " + e.message);
+        }
     }
 
-    function showCamResults(data) {
-        document.getElementById('camEmotionName').textContent = data.emotion;
-        document.getElementById('camConfidenceText').textContent = 'Confidence: ' + data.confidence + '%';
-        document.getElementById('camQuote').textContent = data.quote || '';
-        renderBreakdownChart('camBreakdown', data.breakdown);
-        renderSongs('camSongsList', data.recommendations);
-        document.getElementById('camResultBlock').classList.add('show');
-        setMoodBackground(data.emotion);
+    // 3. Download Session Report PDF
+    async function downloadSessionPDF() {
+        if (moodHistory.length === 0) {
+            alert("No session telemetry log. Record some moods before downloading the PDF report.");
+            return;
+        }
+        
+        try {
+            const stats = {
+                count: moodHistory.length,
+                dominant: document.getElementById('statsDominant').textContent,
+                stability: document.getElementById('statsStability').textContent
+            };
+            
+            const res = await fetch('/telemetry/report', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ history: moodHistory, stats: stats })
+            });
+            
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'harmony_mind_session_report.pdf';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        } catch (e) {
+            alert("Failed to download PDF report: " + e.message);
+        }
     }
+
+    // 4. Chart.js Analytics Dashboard Initialization and Updates
+    let timelineChartObj = null;
+    let frequencyChartObj = null;
+    let heatmapChartObj = null;
+
+    function updateAnalyticsCharts() {
+        if (moodHistory.length === 0) return;
+        
+        // Extract data
+        const labels = moodHistory.map((item, idx) => `Scan ${idx + 1}`);
+        const confidenceData = moodHistory.map(item => item.confidence);
+        const emotionLabels = moodHistory.map(item => item.emotion === 'neutral' ? 'Calm' : item.emotion);
+
+        // Timeline Line Chart
+        const timelineCanvas = document.getElementById('moodTimelineChart');
+        if (!timelineCanvas) return;
+        const timelineCtx = timelineCanvas.getContext('2d');
+        if (timelineChartObj) timelineChartObj.destroy();
+        
+        timelineChartObj = new Chart(timelineCtx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Prediction Confidence (%)',
+                    data: confidenceData,
+                    borderColor: 'rgb(99, 102, 241)',
+                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.35,
+                    pointBackgroundColor: 'rgb(16, 185, 129)'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: { min: 0, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9ca3af' } },
+                    x: { grid: { display: false }, ticks: { color: '#9ca3af' } }
+                }
+            }
+        });
+
+        // Weekly Frequency Bar Chart
+        const freqCtx = document.getElementById('moodFrequencyChart').getContext('2d');
+        if (frequencyChartObj) frequencyChartObj.destroy();
+
+        // Calculate emotion frequencies
+        const emotionCounts = {};
+        moodHistory.forEach(item => {
+            const name = item.emotion === 'neutral' ? 'Calm' : item.emotion;
+            emotionCounts[name] = (emotionCounts[name] || 0) + 1;
+        });
+
+        frequencyChartObj = new Chart(freqCtx, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(emotionCounts),
+                datasets: [{
+                    data: Object.values(emotionCounts),
+                    backgroundColor: 'rgba(16, 185, 129, 0.75)',
+                    borderColor: 'rgb(16, 185, 129)',
+                    borderWidth: 1.5,
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { precision: 0, color: '#9ca3af' } },
+                    x: { grid: { display: false }, ticks: { color: '#9ca3af' } }
+                }
+            }
+        });
+
+        // Emotion Heatmap (Radar representation for multi-dimensional profile)
+        const heatmapCtx = document.getElementById('moodHeatmapChart').getContext('2d');
+        if (heatmapChartObj) heatmapChartObj.destroy();
+
+        const allEmotions = ['joy', 'sadness', 'anger', 'fear', 'surprise', 'disgust', 'neutral'];
+        const heatmapData = allEmotions.map(emo => {
+            const count = moodHistory.filter(item => item.emotion === emo).length;
+            return count;
+        });
+
+        const displayEmotionLabels = allEmotions.map(emo => emo === 'neutral' ? 'Calm' : emo.toUpperCase());
+
+        heatmapChartObj = new Chart(heatmapCtx, {
+            type: 'radar',
+            data: {
+                labels: displayEmotionLabels,
+                datasets: [{
+                    label: 'Emotion Distribution',
+                    data: heatmapData,
+                    backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                    borderColor: 'rgb(99, 102, 241)',
+                    pointBackgroundColor: 'rgb(239, 68, 68)',
+                    borderWidth: 1.5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    r: {
+                        grid: { color: 'rgba(255,255,255,0.08)' },
+                        angleLines: { color: 'rgba(255,255,255,0.08)' },
+                        pointLabels: { color: '#9ca3af', font: { size: 9 } },
+                        ticks: { display: false }
+                    }
+                }
+            }
+        });
+    }
+
+    // 5. Download Charts as PNG Image
+    function downloadChart(chartId) {
+        const canvas = document.getElementById(chartId);
+        if (!canvas) return;
+        
+        const url = canvas.toDataURL('image/png');
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${chartId}.png`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+    }
+
+    // 6. Manual Theme Mode Switch (Dark / Light Mode)
+    let isDarkMode = true;
+    function toggleThemeMode() {
+        isDarkMode = !isDarkMode;
+        const btn = document.getElementById('themeToggleBtn');
+        
+        if (isDarkMode) {
+            btn.textContent = '🌙 Dark Mode';
+            document.documentElement.style.setProperty('--bg-color', '#07070c');
+            document.documentElement.style.setProperty('--card-bg', 'rgba(20, 20, 35, 0.6)');
+            document.documentElement.style.setProperty('--text-main', '#f3f4f6');
+            document.documentElement.style.setProperty('--text-muted', '#9ca3af');
+            document.documentElement.style.setProperty('--border-color', 'rgba(255, 255, 255, 0.08)');
+        } else {
+            btn.textContent = '☀️ Light Mode';
+            document.documentElement.style.setProperty('--bg-color', '#f8fafc');
+            document.documentElement.style.setProperty('--card-bg', 'rgba(255, 255, 255, 0.88)');
+            document.documentElement.style.setProperty('--text-main', '#1e293b');
+            document.documentElement.style.setProperty('--text-muted', '#64748b');
+            document.documentElement.style.setProperty('--border-color', 'rgba(0, 0, 0, 0.08)');
+        }
+    }
+
+    // 7. Update Timer preferences
+    function updateTimerPreferences() {
+        const focusMin = parseInt(document.getElementById('prefFocusTime').value) || 25;
+        const breakMin = parseInt(document.getElementById('prefBreakTime').value) || 5;
+        
+        if (timerMode === 'focus') {
+            timerSeconds = focusMin * 60;
+        } else {
+            timerSeconds = breakMin * 60;
+        }
+        updateTimerDisplay();
+        console.log(`Updated timer settings. Focus: ${focusMin}m, Break: ${breakMin}m`);
+    }
+
+    // 8. Reset Session States
+    function resetSession() {
+        if (confirm("Are you sure you want to reset the current session? This clears all logs and history.")) {
+            clearHistory();
+            if (timelineChartObj) { timelineChartObj.destroy(); timelineChartObj = null; }
+            if (frequencyChartObj) { frequencyChartObj.destroy(); frequencyChartObj = null; }
+            if (heatmapChartObj) { heatmapChartObj.destroy(); heatmapChartObj = null; }
+            resetTimer();
+            setEmotionTheme('neutral');
+            animateAvatar('neutral');
+            
+            document.getElementById('resultsEmptyState').style.display = 'flex';
+            document.getElementById('resultsContent').style.display = 'none';
+            document.getElementById('fineTunerContainer').style.display = 'none';
+            document.getElementById('xaiPanel').style.display = 'none';
+            
+            // Clear input texts
+            document.getElementById('userText').value = '';
+            document.getElementById('fusionText').value = '';
+        }
+    }
+
+    // 9. Keyboard Shortcuts Listener
+    document.addEventListener('keydown', function(e) {
+        // Space bar plays/pauses persistent player if input elements are not focused
+        if (e.code === 'Space' && document.activeElement.tagName !== 'TEXTAREA' && document.activeElement.tagName !== 'INPUT') {
+            e.preventDefault();
+            togglePlayPause();
+        }
+        
+        // Ctrl + Shift + P toggles Pomodoro timer
+        if (e.ctrlKey && e.shiftKey && e.code === 'KeyP') {
+            e.preventDefault();
+            toggleTimer();
+        }
+        
+        // Ctrl + Shift + B toggles Box-Breathing
+        if (e.ctrlKey && e.shiftKey && e.code === 'KeyB') {
+            e.preventDefault();
+            toggleBreathingGuide();
+        }
+
+        // Ctrl + Shift + X opens Session Diagnostics
+        if (e.ctrlKey && e.shiftKey && e.code === 'KeyX') {
+            e.preventDefault();
+            generateFocusDiagnostics();
+        }
+        
+        // Esc closes modal/drawer
+        if (e.code === 'Escape') {
+            closeDiagnostics();
+            if (isPlayerDrawerExpanded) {
+                togglePlayerDrawer();
+            }
+        }
+    });
 </script>
 </body>
 </html>
