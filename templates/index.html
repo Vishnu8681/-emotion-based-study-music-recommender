@@ -1846,6 +1846,8 @@
     let moodHistory = [];
     let currentThemeEmotion = 'neutral';
     let selectedStrategy = 'match';
+    let lastDetectedEmotionCategory = 'neutral';
+    let lastScanTimestamp = 0;
 
     // Face Landmarker state
     let faceLandmarker = null;
@@ -2101,6 +2103,30 @@
             hudBar.style.width = `${expressiveness}%`;
             hudVal.textContent = `${expressiveness}%`;
         }
+
+        // Event-driven immediate scan trigger on expression transition
+        if (mode === 'webcam' && localStream && !isWebcamScanning) {
+            let category = 'neutral';
+            if (isSurpriseOverridden) category = 'surprise';
+            else if (isSadHandOnCheek || isSadLipsDown) category = 'sadness';
+            else if (isAngrySquint || isAsymmetricAngry) category = 'anger';
+            else if (smile > 0.3) category = 'joy';
+            else if (furrow < 0.78) category = 'focus';
+            else if (surprise > 0.25) category = 'surprise';
+
+            const now = Date.now();
+            if (category !== lastDetectedEmotionCategory && (now - lastScanTimestamp > 2000)) {
+                console.log(`Expression state transitioned from ${lastDetectedEmotionCategory} to ${category}. Triggering immediate scan.`);
+                lastDetectedEmotionCategory = category;
+                lastScanTimestamp = now;
+
+                if (webcamInterval) {
+                    clearInterval(webcamInterval);
+                    webcamInterval = setInterval(captureAndScanCam, 2000);
+                }
+                captureAndScanCam();
+            }
+        }
     }
 
     async function trackFaceLandmarks(mode) {
@@ -2336,8 +2362,10 @@
             }
             
             // start automatic interval analysis
+            lastDetectedEmotionCategory = 'neutral';
+            lastScanTimestamp = Date.now();
             captureAndScanCam();
-            webcamInterval = setInterval(captureAndScanCam, 5000);
+            webcamInterval = setInterval(captureAndScanCam, 2000);
         } catch (err) {
             console.error("Camera access error:", err);
             let msg = 'Could not access your camera: ' + err.message;
@@ -2401,6 +2429,7 @@
     async function captureAndScanCam() {
         if(isWebcamScanning) return;
         isWebcamScanning = true;
+        lastScanTimestamp = Date.now();
         
         const video = document.getElementById('webcamVideo');
         const canvas = document.getElementById('captureCanvas');

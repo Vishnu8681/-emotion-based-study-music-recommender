@@ -11,7 +11,9 @@ from sklearn.naive_bayes import MultinomialNB
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Embedding, LSTM, Dense, Dropout
+# pyrefly: ignore [missing-import]
 from tensorflow.keras.preprocessing.text import Tokenizer
+# pyrefly: ignore [missing-import]
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 
@@ -87,6 +89,7 @@ with open(os.path.join(models_dir, 'label_encoder.pkl'), 'wb') as f:
 
 print("\nStep 3: Building the Deep Learning Model (LSTM)...")
 model = Sequential([
+    # pyrefly: ignore [unexpected-keyword]
     Embedding(MAX_WORDS, 64, input_shape=(MAX_LEN,)),
     LSTM(128, dropout=0.2, recurrent_dropout=0.2),
     Dense(64, activation='relu'),
@@ -233,4 +236,4 @@ plt.savefig(roc_path, dpi=300)
 plt.close()
 print(f"Saved ROC curves to {roc_path}")
 
-print("\nModel Training and Evaluation complete! Saved best model weights to models/best_model.h5.")
+print("\nModel Training and Evaluation complete! Saved best model weights to models/best_model.h5.")

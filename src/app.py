@@ -10,7 +10,6 @@ from deepface import DeepFace
 import keras
 from keras.preprocessing.sequence import pad_sequences
 
-# Configure stdout and stderr to use UTF-8 encoding on Windows to prevent DeepFace emoji print crashes
 if sys.platform.startswith('win'):
     try:
         sys.stdout.reconfigure(encoding='utf-8')
@@ -286,14 +285,13 @@ def recommend_webcam():
             frame,
             actions=['emotion'],
             enforce_detection=False,
-            detector_backend='ssd'
+            detector_backend='opencv'
         )
 
         emotions_dict = result[0]['emotion']
         if 'neutral' in emotions_dict:
             emotions_dict['neutral'] = emotions_dict['neutral'] * 0.25
 
-        # Fuse client landmarks metrics to increase capture accuracy
         emotions_dict = apply_client_metrics(emotions_dict, client_metrics)
 
         raw_emotion = max(emotions_dict, key=emotions_dict.get)
@@ -340,7 +338,6 @@ def recommend_webcam():
             'quote': quote,
             'breakdown': breakdown
         })
-
     except Exception as e:
         import traceback
         print("WEBCAM ERROR:", traceback.format_exc())
@@ -374,7 +371,7 @@ def recommend_fusion():
                     frame,
                     actions=['emotion'],
                     enforce_detection=False,
-                    detector_backend='ssd'
+                    detector_backend='opencv'
                 )
 
                 emotions_dict = result[0]['emotion']
@@ -640,4 +637,4 @@ def telemetry_report():
 
 if __name__ == '__main__':
     app.run(debug=True)
-
+

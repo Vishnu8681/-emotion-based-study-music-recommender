@@ -1,9 +1,9 @@
 # 🌌 HarmonyMind – Emotion-Based Study Music Recommender using Deep Learning
 
 **Course Code:** 23ADC04 DEEP LEARNING (Individual Project)  
-**Student Name:** Vishnu Priya S  
-**Roll Number:** 23ADC04  
-**Section / Year:** B.Tech AI & DS / III Year  
+**Student Name:** Vishnu   
+**Roll Number:** 727824tuam056 
+**Section / Year:** B.E AI & ML / III Year  
 **Institution:** Sri Krishna College of Engineering and Technology  
 
 ---
